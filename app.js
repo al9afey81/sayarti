@@ -63,11 +63,7 @@
     return {id:'shaqran',name:v.name?.split('|')[0]?.trim()||'شقران',make:legacyPoer?'Great Wall / GWM':(v.make||'Great Wall / GWM'),model:v.modelName||(legacyPoer?'Poer':(typeof v.model==='string'?v.model:'Poer')),trim:v.trim||'',year:num(v.year??v.model)||2025,color:fixedCode(v.color||'أبيض'),fuel:fixedCode(v.fuel||'ديزل'),plate:v.plate||'',image:v.image||'',imageUrl:v.imageUrl||'',odometer:num(v.odometer??source.odometer??12450),odometerUpdatedAt:v.odometerUpdatedAt||stamp(),serviceInterval:Math.max(1000,num(v.serviceInterval)||10000),notes:v.notes||'رفيق الدروب الطويلة والمسارات البعيدة',createdAt:v.createdAt||stamp()};
   }
   function seed(){
-    const vehicle=shaqranVehicle();
-    return {version:3,activeVehicleId:null,vehicles:[vehicle],
-      maintenance:[{id:'m_1',vehicleId:'shaqran',date:'2026-06-18',odometer:10000,types:['engine_oil','oil_filter'],notes:'فحص عام وتغيير الزيت والفلتر',cost:620,currency:'KWD',workshop:'مركز الصيانة'}],
-      expenses:[{id:'e_1',vehicleId:'shaqran',date:'2026-08-05',category:'fuel',amount:840,currency:'KWD',notes:'تعبئة ديزل'},{id:'e_2',vehicleId:'shaqran',date:'2026-06-18',category:'maintenance',amount:620,currency:'KWD',notes:'صيانة دورية'},{id:'e_3',vehicleId:'shaqran',date:'2026-01-12',category:'insurance',amount:1350,currency:'KWD',notes:'التأمين السنوي'},{id:'e_4',vehicleId:'shaqran',date:'2026-07-22',category:'fees',amount:95,currency:'KWD',notes:'رسوم طرق'}],
-      trips:[{id:'t_1',vehicleId:'shaqran',date:'2026-09-12',start:'المنزل',destination:'جبال الحجر',startOdometer:12450,endOdometer:12830,type:'offroad',cost:0,currency:'KWD',notes:'رحلة نهاية الأسبوع'},{id:'t_2',vehicleId:'shaqran',date:'2026-04-20',start:'الرياض',destination:'وادي الديسة',startOdometer:9280,endOdometer:10000,type:'travel',cost:0,currency:'KWD',notes:''}]};
+    return {version:3,activeVehicleId:null,vehicles:[],maintenance:[],expenses:[],trips:[]};
   }
   function migrate(source,legacyV1=false){
     if(!source||typeof source!=='object')return seed();
