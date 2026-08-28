@@ -64,4 +64,5 @@ dialog{border-color:#d7e6ea;color:var(--text);background:#fff;box-shadow:0 30px 
 @media(max-width:760px){.vehicle-photo{min-height:230px;order:-1}.vehicle-photo-actions{right:12px;bottom:12px;left:12px}.photo-primary-btn,.photo-small-btn{min-height:38px;padding-inline:11px;font-size:.64rem}.form-image-preview{height:180px}}
 
 /* Keep the complete Hero fleet visible on phones only */
-@media(max-width:768px){html,body{max-width:100%;overflow-x:hidden}.fleet-hero:before{background-size:contain;background-position:center bottom;background-repeat:no-repeat}}
+.fleet-hero-mobile-image{display:none}
+@media(max-width:768px){html,body{max-width:100%;overflow-x:hidden}.topbar{grid-template-columns:1fr}.brand{grid-row:1;justify-self:center}.top-actions{grid-row:2;justify-self:center;flex-wrap:wrap}.main-nav{grid-row:3}.fleet-hero:before{display:none}.fleet-hero-mobile-image{position:absolute;z-index:-2;right:0;bottom:0;left:0;display:block;width:100%;max-width:100%;height:auto;object-fit:contain;object-position:center}}
