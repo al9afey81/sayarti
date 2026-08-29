@@ -94,3 +94,21 @@ body:not(.auth-ready)>.shell{visibility:hidden;pointer-events:none}.auth-gate{po
 .topbar .auth-user[hidden]{display:none}
 .topbar .auth-user span{min-width:0;max-width:none;overflow:visible;text-overflow:clip;white-space:normal;overflow-wrap:anywhere;line-height:1.35}
 @media(max-width:680px){.topbar{display:grid;grid-template-columns:1fr;align-items:center}.topbar .main-nav{grid-column:1;grid-row:1;justify-self:center}.topbar .top-actions{grid-column:1;grid-row:2;width:100%;max-width:100%;justify-content:center;justify-self:center;margin-inline-start:0}.topbar .auth-user{display:flex;flex:0 0 auto;max-width:none}.topbar .auth-user[hidden]{display:none}.topbar .auth-user span{display:none}}
+
+/* Refined application header */
+.topbar{display:grid;grid-template-columns:minmax(210px,auto) minmax(150px,1fr) minmax(0,auto);gap:clamp(18px,2.5vw,38px);min-height:96px;padding:16px 20px;border-color:#d5b675;border-bottom:2px solid #c9973e;background:#fffdf7f5;box-shadow:0 10px 28px #243f4d14}
+.header-identity{display:grid;align-content:center;min-width:0;line-height:1.25}
+.header-identity strong{color:#b77f29;font-size:clamp(1.55rem,2vw,1.9rem);font-weight:800;letter-spacing:-.02em}
+.header-identity span{margin-top:5px;color:#19394c;font-size:.94rem;font-weight:600;white-space:nowrap}
+.topbar .main-nav{justify-self:center}
+.topbar .main-nav button{min-width:140px;min-height:46px;padding-inline:18px;color:#23485b;font-size:.94rem;font-weight:700}
+.topbar .main-nav button.active{color:#a67225}
+.topbar .top-actions{align-items:center;gap:8px;max-width:100%;margin-inline-start:0}
+.topbar .auth-user{gap:9px;max-width:min(500px,38vw)}
+.topbar .auth-user img{width:40px;height:40px;flex-basis:40px}
+.topbar .auth-user span{color:#294f62;font-size:.88rem;font-weight:600}
+.topbar .auth-user button{min-height:40px;padding-inline:12px;color:#294f62;font-size:.82rem;font-weight:700}
+.topbar .header-backup-btn{width:42px;min-width:42px;height:42px;flex-basis:42px;background:#fffaf0}
+.topbar .header-language select{min-width:88px;min-height:42px;background:#fffaf0;color:#294f62;font-size:.78rem;font-weight:600}
+@media(max-width:980px){.topbar{grid-template-columns:minmax(190px,auto) auto;gap:14px}.topbar .header-identity{grid-column:1;grid-row:1}.topbar .main-nav{grid-column:2;grid-row:1}.topbar .top-actions{grid-column:1/-1;grid-row:2;justify-self:center}}
+@media(max-width:680px){.topbar{grid-template-columns:1fr;gap:12px;min-height:0;padding:16px 12px}.topbar .header-identity{grid-column:1;grid-row:1;justify-self:center;text-align:center}.header-identity strong{font-size:1.65rem}.header-identity span{font-size:.88rem;white-space:normal}.topbar .main-nav{grid-column:1;grid-row:2}.topbar .main-nav button{min-width:150px;min-height:43px;font-size:.9rem}.topbar .top-actions{grid-column:1;grid-row:3;display:flex;width:100%;max-width:100%;justify-content:center;gap:7px;flex-wrap:wrap}.topbar .auth-user{display:grid;grid-template-columns:auto minmax(0,1fr) auto;flex:1 1 100%;width:100%;max-width:100%;padding:8px 10px;border-radius:13px;background:#fffaf0}.topbar .auth-user[hidden]{display:none}.topbar .auth-user span{display:block;font-size:.82rem;text-align:start;overflow-wrap:anywhere}.topbar .auth-user button{font-size:.78rem}.topbar .header-backup-btn{width:40px;min-width:40px;height:40px;flex-basis:40px}.topbar .header-language select{min-width:86px;min-height:40px}}
