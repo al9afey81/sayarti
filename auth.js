@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const REDIRECT_URL='https://al9afey81.github.io/sayarti/';
+  const REDIRECT_URL=new URL('./',window.location.href).href;
   const body=document.body,gate=document.querySelector('#auth-gate'),form=document.querySelector('#auth-form');
   const email=document.querySelector('#auth-email'),password=document.querySelector('#auth-password'),message=document.querySelector('#auth-message');
   const googleButton=document.querySelector('#google-auth-btn'),emailButton=document.querySelector('#email-auth-btn');

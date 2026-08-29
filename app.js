@@ -94,7 +94,7 @@
     try{const current=localStorage.getItem(KEY);if(current)return normalize(JSON.parse(current));const v2=localStorage.getItem(V2);if(v2){const d=migrate(JSON.parse(v2));localStorage.setItem(KEY,JSON.stringify(d));return d}const v1=localStorage.getItem(V1);if(v1){const d=migrate(JSON.parse(v1),true);localStorage.setItem(KEY,JSON.stringify(d));return d}const d=seed();localStorage.setItem(KEY,JSON.stringify(d));return d}catch(e){console.warn(e);return seed()}
   }
 
-  let data=load(),activeForm='',editingId=null,tripFilter='all',pendingDelete=null,currentNav='home',pendingVehicleImage;
+  let data=load(),activeForm='',editingId=null,tripFilter='all',pendingDelete=null,currentNav='home',pendingVehicleImage,exchangeRates=null,exchangeUpdatedAt=null,exchangeError=false;
   const activeVehicle=()=>data.vehicles.find(v=>v.id===data.activeVehicleId)||null;
   const recordsFor=name=>data[name].filter(r=>r.vehicleId===data.activeVehicleId);
   function save(message){localStorage.setItem(KEY,JSON.stringify(data));render();if(message)toast(message)}
@@ -105,8 +105,33 @@
     data.trips.filter(r=>r.vehicleId===vehicleId).forEach(r=>add(tripTotal(r),r.currency));
     return totals;
   }
+  function currentFinancialTotals(){
+    if(activeVehicle())return totalsFor(activeVehicle().id);
+    const totals={};data.vehicles.forEach(v=>Object.entries(totalsFor(v.id)).forEach(([currency,value])=>totals[currency]=(totals[currency]||0)+value));return totals;
+  }
+  const convertedAmount=(amount,from,to)=>exchangeRates?.[from]&&exchangeRates?.[to]?num(amount)/exchangeRates[from]*exchangeRates[to]:null;
+  function currencyOptions(selected){return Object.entries(CURRENCIES).map(([code,item])=>`<option value="${code}"${code===selected?' selected':''}>${code} — ${esc(item.name)}</option>`).join('')}
+  function renderCurrencyTools(){
+    const finalSelect=$('#final-currency'),from=$('#converter-from'),to=$('#converter-to');if(!finalSelect)return;
+    if(!finalSelect.options.length){finalSelect.innerHTML=currencyOptions('KWD');from.innerHTML=currencyOptions('KWD');to.innerHTML=currencyOptions('USD')}
+    const status=$('#rate-status');
+    if(exchangeError)status.textContent=language==='ar'?'تعذر تحميل أسعار الصرف. تحقق من الاتصال.':'Could not load exchange rates. Check your connection.';
+    else if(!exchangeRates)status.textContent=language==='ar'?'جارٍ تحميل أسعار الصرف…':'Loading exchange rates…';
+    else status.textContent=(language==='ar'?'آخر تحديث: ':'Last updated: ')+date(exchangeUpdatedAt);
+    const target=currencyCode(finalSelect.value),totals=currentFinancialTotals(),values=Object.entries(totals).map(([currency,value])=>convertedAmount(value,currency,target));
+    const finalValue=exchangeRates&&values.every(value=>value!==null)?values.reduce((sum,value)=>sum+value,0):null;
+    $('#final-total-value').innerHTML=finalValue===null?'—':moneyMetric(finalValue,target);
+    const amount=num($('#converter-amount').value),rate=convertedAmount(1,currencyCode(from.value),currencyCode(to.value)),result=rate===null?null:amount*rate;
+    $('#exchange-rate-value').textContent=rate===null?'—':`1 ${from.value} = ${new Intl.NumberFormat(locale(),{maximumFractionDigits:6}).format(rate)} ${to.value}`;
+    $('#conversion-value').innerHTML=result===null?'—':moneyMetric(result,to.value)
+  }
+  async function loadExchangeRates(){
+    exchangeError=false;renderCurrencyTools();
+    try{const response=await fetch('https://open.er-api.com/v6/latest/USD',{cache:'no-store'});if(!response.ok)throw Error();const payload=await response.json();if(payload.result!=='success'||!payload.rates)throw Error();const supported=Object.keys(CURRENCIES);if(!supported.every(code=>Number(payload.rates[code])>0))throw Error();exchangeRates=payload.rates;exchangeUpdatedAt=payload.time_last_update_utc||new Date().toISOString()}
+    catch(error){console.warn('Exchange rates unavailable',error);exchangeError=true}renderCurrencyTools()
+  }
   const totalsHTML=(totals,empty='لا توجد مصاريف')=>Object.keys(totals).length?Object.entries(totals).filter(([,v])=>v>0).map(([c,v])=>`<span class="metric-value">${moneyMetric(v,c)}</span>`).join('<span class="metric-divider"> · </span>')||empty:empty;
-  function render(){renderHome();if(activeVehicle())renderVehicle();const detail=!!activeVehicle();$('#home-view').hidden=detail;$('#vehicle-view').hidden=!detail;$$('.main-nav [data-nav]').forEach(x=>x.classList.toggle('active',x.dataset.nav===currentNav));applyLanguage();window.scrollTo?.({top:0,behavior:'instant'})}
+  function render(){renderHome();if(activeVehicle())renderVehicle();const detail=!!activeVehicle();$('#home-view').hidden=detail;$('#vehicle-view').hidden=!detail;$$('.main-nav [data-nav]').forEach(x=>x.classList.toggle('active',x.dataset.nav===currentNav));renderCurrencyTools();applyLanguage();renderCurrencyTools();window.scrollTo?.({top:0,behavior:'instant'})}
   function renderHome(){
     const fleetKm=data.vehicles.reduce((s,v)=>s+num(v.odometer),0),allTotals={};data.vehicles.forEach(v=>Object.entries(totalsFor(v.id)).forEach(([c,value])=>allTotals[c]=(allTotals[c]||0)+value));
     $('#fleet-count').innerHTML=metric(data.vehicles.length);$('#fleet-km').innerHTML=metric(fleetKm);$('#fleet-records').innerHTML=metric(data.maintenance.length+data.expenses.length+data.trips.length);$('#home-distance').innerHTML=metric(fleetKm,'كم');$('#home-trips').innerHTML=metric(data.trips.length,'رحلة');$('#home-expenses').innerHTML=totalsHTML(allTotals);
@@ -288,5 +313,6 @@
   $('#print-report').onclick=()=>window.print();
   $('#report-dialog').onclick=e=>{if(e.target===$('#report-dialog'))$('#report-dialog').close()};
   $('#language-select').onchange=e=>{language=e.target.value==='en'?'en':'ar';localStorage.setItem(LANGUAGE_KEY,language);render();if($('#app-dialog').open)applyLanguage($('#app-dialog'));if($('#report-dialog').open)renderReport();if($('#confirm-dialog').open)applyLanguage($('#confirm-dialog'))};
-  render();
+  $('#final-currency').addEventListener('change',renderCurrencyTools);$('#converter-amount').addEventListener('input',renderCurrencyTools);$('#converter-from').addEventListener('change',renderCurrencyTools);$('#converter-to').addEventListener('change',renderCurrencyTools);$('#currency-converter').addEventListener('submit',e=>e.preventDefault());$('#swap-currency').addEventListener('click',()=>{const from=$('#converter-from'),to=$('#converter-to'),value=from.value;from.value=to.value;to.value=value;renderCurrencyTools()});
+  render();loadExchangeRates();
 })();
