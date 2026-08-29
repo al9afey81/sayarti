@@ -1,0 +1,20 @@
+(() => {
+  'use strict';
+  const drawer=document.querySelector('#mobile-drawer'),overlay=document.querySelector('#mobile-drawer-overlay'),toggle=document.querySelector('#mobile-menu-toggle');
+  const closeButton=document.querySelector('#mobile-drawer-close'),profile=document.querySelector('#mobile-drawer-profile'),drawerAvatar=document.querySelector('#mobile-drawer-avatar');
+  const drawerName=document.querySelector('#mobile-drawer-name'),loginButton=document.querySelector('#mobile-login-btn'),mobileSignout=document.querySelector('#mobile-signout-btn');
+  const authUser=document.querySelector('#auth-user'),authAvatar=document.querySelector('#auth-avatar'),authName=document.querySelector('#auth-user-name');
+  const desktopLanguage=document.querySelector('#language-select'),mobileLanguage=document.querySelector('#mobile-language-select');
+  const openDrawer=()=>{overlay.hidden=false;drawer.classList.add('is-open');overlay.classList.add('is-open');drawer.setAttribute('aria-hidden','false');toggle.setAttribute('aria-expanded','true');document.body.classList.add('mobile-drawer-open');closeButton.focus()};
+  const closeDrawer=()=>{drawer.classList.remove('is-open');overlay.classList.remove('is-open');drawer.setAttribute('aria-hidden','true');toggle.setAttribute('aria-expanded','false');document.body.classList.remove('mobile-drawer-open');setTimeout(()=>{if(!drawer.classList.contains('is-open'))overlay.hidden=true},240)};
+  const syncSession=()=>{const signedIn=!authUser.hidden;profile.hidden=!signedIn;mobileSignout.hidden=!signedIn;loginButton.hidden=signedIn;drawerName.textContent=authName.textContent;if(authAvatar.src&&!authAvatar.hidden){drawerAvatar.src=authAvatar.src;drawerAvatar.hidden=false}else{drawerAvatar.removeAttribute('src');drawerAvatar.hidden=true}};
+  toggle.addEventListener('click',openDrawer);closeButton.addEventListener('click',closeDrawer);overlay.addEventListener('click',closeDrawer);
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&drawer.classList.contains('is-open'))closeDrawer()});
+  drawer.addEventListener('click',event=>{const action=event.target.closest('[data-mobile-action]')?.dataset.mobileAction;if(action==='export')document.querySelector('#export-btn').click();if(action==='import')document.querySelector('#import-btn').click();if(action==='currency')document.querySelector('#currency-tools')?.scrollIntoView({behavior:'smooth',block:'start'});if(action||event.target.closest('[data-nav]'))closeDrawer()});
+  mobileSignout.addEventListener('click',()=>{document.querySelector('#signout-btn').click();closeDrawer()});
+  loginButton.addEventListener('click',()=>{closeDrawer();document.querySelector('#auth-gate').hidden=false});
+  mobileLanguage.addEventListener('change',()=>{desktopLanguage.value=mobileLanguage.value;desktopLanguage.dispatchEvent(new Event('change',{bubbles:true}));closeDrawer()});
+  desktopLanguage.addEventListener('change',()=>{mobileLanguage.value=desktopLanguage.value});
+  new MutationObserver(syncSession).observe(authUser,{attributes:true,subtree:true,childList:true,characterData:true});
+  mobileLanguage.value=desktopLanguage.value;syncSession();
+})();
