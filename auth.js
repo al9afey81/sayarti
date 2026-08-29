@@ -1,6 +1,7 @@
 (() => {
   'use strict';
   const REDIRECT_URL=new URL('./',window.location.href).href;
+  const IS_PRIVATE_NETWORK=/^(localhost|127(?:\.\d{1,3}){3}|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})$/.test(window.location.hostname);
   const body=document.body,gate=document.querySelector('#auth-gate'),form=document.querySelector('#auth-form');
   const email=document.querySelector('#auth-email'),password=document.querySelector('#auth-password'),message=document.querySelector('#auth-message');
   const googleButton=document.querySelector('#google-auth-btn'),emailButton=document.querySelector('#email-auth-btn');
@@ -40,6 +41,7 @@
   }
   async function signInGoogle(){
     if(busy||!client)return;setBusy(true);setMessage('جارٍ تحويلك إلى Google…','Redirecting to Google…');
+    if(IS_PRIVATE_NETWORK){setMessage('تسجيل Google المحلي يحتاج إضافة عنوان الشبكة إلى Redirect URLs في Supabase. استخدم البريد الإلكتروني للاختبار المحلي.','Local Google sign-in requires adding this network address to Supabase Redirect URLs. Use email for local testing.',true);setBusy(false);return}
     const {error}=await client.auth.signInWithOAuth({provider:'google',options:{redirectTo:REDIRECT_URL}});
     if(error){setMessage(friendlyError(error),friendlyError(error),true);setBusy(false)}
   }
