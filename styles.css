@@ -139,3 +139,6 @@ body:not(.auth-ready)>.shell{visibility:hidden;pointer-events:none}.auth-gate{po
 
 /* Let mobile profile photos fill the card width at their original aspect ratio. */
 @media(max-width:680px){.hero .vehicle-photo{height:auto;min-height:0}.hero .vehicle-photo:has(>img[hidden]){min-height:230px}.hero .vehicle-photo>img{position:static;display:block;width:100%;height:auto;object-fit:contain}}
+
+/* Keep main vehicle card photos full-width and uncropped on mobile. */
+@media(max-width:680px){.vehicle-card-image:not(.vehicle-card-placeholder){height:auto}.vehicle-card-image>img{display:block;width:100%;height:auto;object-fit:initial}}
