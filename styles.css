@@ -129,8 +129,8 @@ body:not(.auth-ready)>.shell{visibility:hidden;pointer-events:none}.auth-gate{po
 @media(max-width:680px){.topbar{position:relative;display:block;width:100%;height:auto;aspect-ratio:1774/887;min-height:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;backdrop-filter:none;overflow:hidden}.mobile-header-art{position:absolute;z-index:1;inset:0;display:block;width:100%;height:100%;object-fit:contain}.topbar .header-identity,.topbar .mobile-header-scenery{display:none}.topbar .mobile-menu-toggle{position:absolute;z-index:2;top:calc(40.7% - 22px);left:calc(10.2% - 22px);display:block;width:44px;height:44px;margin:0;padding:0;border:0;border-radius:10px;background:transparent;box-shadow:none}.topbar .mobile-menu-toggle span{opacity:0}}
 @media(min-width:681px){.mobile-header-art{display:none!important}}
 
-/* Hide the bottom currency tools only in the mobile vehicle/trip detail view. */
-@media(max-width:680px){#vehicle-view:not([hidden])~#currency-tools{display:none}}
+/* Keep final totals visible; hide only the standalone converter on mobile. */
+@media(max-width:680px){#currency-converter,#currency-tools .rates-credit{display:none}}
 
 /* Mobile currency converter: one clear vertical flow. */
 @media(max-width:680px){.currency-converter{grid-template-columns:minmax(0,1fr);gap:10px;padding:15px}.currency-converter label{width:100%}.currency-converter input,.currency-converter select{width:100%;min-width:0}.currency-converter .swap-currency-btn{grid-column:1;justify-self:center;margin:0;transform:rotate(90deg)}.currency-converter .conversion-result{grid-column:1;width:100%;margin-top:2px;padding-top:12px}}
