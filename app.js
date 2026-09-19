@@ -155,7 +155,7 @@
   }
   function renderVehicle(){
     const v=activeVehicle(),maintenance=recordsFor('maintenance'),expenses=recordsFor('expenses'),trips=recordsFor('trips');
-    $('#vehicle-name').textContent=vehicleTitle(v);$('#vehicle-model').textContent=[v.make,v.model,v.trim,v.year].filter(Boolean).join(' ');$('#vehicle-fuel').textContent=fixedLabel(v.fuel)||'—';$('#vehicle-color').textContent=fixedLabel(v.color)||'—';$('#hero-odometer').textContent=fmt(v.odometer);$('#odometer-updated').textContent=dateTime(v.odometerUpdatedAt);$('#vehicle-plate').textContent=v.plate||'';$('#vehicle-plate').hidden=!v.plate?.trim();$('#stat-maintenance').innerHTML=metric(maintenance.length);$('#stat-trips').innerHTML=metric(trips.length,'رحلة');
+    $('#vehicle-name').textContent=vehicleTitle(v);$('#vehicle-model').textContent=[v.make,v.model,v.trim,v.year].filter(Boolean).join(' ');$('#vehicle-fuel').textContent=fixedLabel(v.fuel)||'—';$('#vehicle-color').textContent=fixedLabel(v.color)||'—';$('#hero-odometer').textContent=fmt(v.odometer);$('#odometer-updated').textContent=dateTime(v.odometerUpdatedAt);$('#vehicle-plate').textContent=v.plate||'';$('#vehicle-plate').hidden=!String(v.plate??'').trim();$('#stat-maintenance').innerHTML=metric(maintenance.length);$('#stat-trips').innerHTML=metric(trips.length,'رحلة');
     const tripKm=trips.reduce((s,t)=>s+(tripDistance(t)??0),0),totals=totalsFor(v.id);
     $('#stat-km').innerHTML=metric(tripKm,'كم');$('#stat-expenses').innerHTML=totalsHTML(totals);
     renderVehiclePhoto(v);renderService(v,maintenance);renderExpenses(carExpenses(expenses,maintenance),totals);renderTrips(trips);
