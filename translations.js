@@ -25,3 +25,12 @@ const en={
 const ar=Object.fromEntries(Object.keys(en).map(key=>[key,key]));
 window.TRANSLATIONS={ar,en};
 })();
+
+Object.assign(window.TRANSLATIONS.en,{
+'إجمالي مصروفات السيارة':'Total Vehicle Expenses',
+'مصروفات السيارة':'Vehicle Expenses',
+'إجمالي مصروفات الرحلات':'Total Trip Expenses',
+'إجمالي مصروفات السيارة وتحويل العملات':'Total Vehicle Expenses and Currency Conversion',
+'عرض إجمالي مصروفات السيارة بعملة':'Display total vehicle expenses in',
+'يشمل مصروفات السيارة والصيانة فقط، ولا يشمل مصروفات الرحلات.':'Includes vehicle expenses and maintenance only. Trip expenses are excluded.'
+});
