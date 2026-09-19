@@ -39,17 +39,18 @@
     }
     return leading?leading[1]+translated:value.replace(core,translated);
   };
+  const displayDigits=value=>String(value).replace(/[٠-٩]/g,c=>'٠١٢٣٤٥٦٧٨٩'.indexOf(c)).replace(/[۰-۹]/g,c=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(c));
   function applyLanguage(root=document){
     document.documentElement.lang=language;document.documentElement.dir=language==='ar'?'rtl':'ltr';document.title=language==='ar'?'سيارتي':'My Car';
     const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let node;
-    while((node=walker.nextNode())){if(['SCRIPT','STYLE'].includes(node.parentElement?.tagName)||node.parentElement?.matches('#vehicle-name,.vehicle-card h2,.note,.report-notes,.report-head h1'))continue;if(!originalText.has(node))originalText.set(node,node.nodeValue);node.nodeValue=language==='ar'?originalText.get(node):translateText(originalText.get(node))}
+    while((node=walker.nextNode())){if(['SCRIPT','STYLE','TEXTAREA'].includes(node.parentElement?.tagName))continue;if(node.parentElement?.matches('#vehicle-name,.vehicle-card h2,.note,.report-notes,.report-head h1')){node.nodeValue=displayDigits(node.nodeValue);continue}if(!originalText.has(node))originalText.set(node,node.nodeValue);node.nodeValue=displayDigits(language==='ar'?originalText.get(node):translateText(originalText.get(node)))}
     const elements=root.querySelectorAll?[root,...root.querySelectorAll('[placeholder],[title],[aria-label]')]:[];
     elements.forEach(el=>{if(!el?.getAttribute)return;let saved=originalAttrs.get(el);if(!saved){saved={};['placeholder','title','aria-label'].forEach(a=>{if(el.hasAttribute(a))saved[a]=el.getAttribute(a)});originalAttrs.set(el,saved)}Object.entries(saved).forEach(([a,v])=>el.setAttribute(a,language==='ar'?v:translateText(v)))});
     const selector=$('#language-select');if(selector)selector.value=language;
   }
   const $=(q,r=document)=>r.querySelector(q), $$=(q,r=document)=>[...r.querySelectorAll(q)];
   const uid=(prefix='id')=>prefix+'_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8);
-  const num=v=>Math.max(0,Number(v)||0), locale=()=>language==='ar'?'ar-KW':'en-US',fmt=v=>new Intl.NumberFormat(locale(),{maximumFractionDigits:2}).format(num(v));
+  const num=v=>Math.max(0,Number(v)||0), locale=()=>language==='ar'?'ar-KW-u-nu-latn':'en-US',fmt=v=>new Intl.NumberFormat(locale(),{maximumFractionDigits:2}).format(num(v));
   const today=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')};
   const stamp=()=>new Date().toISOString();
   const date=v=>v?new Intl.DateTimeFormat(locale(),{day:'numeric',month:'short',year:'numeric'}).format(new Date(v+(v.length===10?'T12:00:00':''))):'—';
@@ -154,7 +155,7 @@
   }
   function renderVehicle(){
     const v=activeVehicle(),maintenance=recordsFor('maintenance'),expenses=recordsFor('expenses'),trips=recordsFor('trips');
-    $('#vehicle-name').textContent=vehicleTitle(v);$('#vehicle-model').textContent=[v.make,v.model,v.trim,v.year].filter(Boolean).join(' ');$('#vehicle-fuel').textContent=fixedLabel(v.fuel)||'—';$('#vehicle-color').textContent=fixedLabel(v.color)||'—';$('#hero-odometer').textContent=fmt(v.odometer);$('#odometer-updated').textContent=dateTime(v.odometerUpdatedAt);$('#vehicle-plate').textContent=v.plate||'دون رقم لوحة';$('#stat-maintenance').innerHTML=metric(maintenance.length);$('#stat-trips').innerHTML=metric(trips.length,'رحلة');
+    $('#vehicle-name').textContent=vehicleTitle(v);$('#vehicle-model').textContent=[v.make,v.model,v.trim,v.year].filter(Boolean).join(' ');$('#vehicle-fuel').textContent=fixedLabel(v.fuel)||'—';$('#vehicle-color').textContent=fixedLabel(v.color)||'—';$('#hero-odometer').textContent=fmt(v.odometer);$('#odometer-updated').textContent=dateTime(v.odometerUpdatedAt);$('#vehicle-plate').textContent=v.plate||'';$('#vehicle-plate').hidden=!v.plate?.trim();$('#stat-maintenance').innerHTML=metric(maintenance.length);$('#stat-trips').innerHTML=metric(trips.length,'رحلة');
     const tripKm=trips.reduce((s,t)=>s+(tripDistance(t)??0),0),totals=totalsFor(v.id);
     $('#stat-km').innerHTML=metric(tripKm,'كم');$('#stat-expenses').innerHTML=totalsHTML(totals);
     renderVehiclePhoto(v);renderService(v,maintenance);renderExpenses(carExpenses(expenses,maintenance),totals);renderTrips(trips);
