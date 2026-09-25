@@ -161,3 +161,10 @@ body:not(.auth-ready)>.shell{visibility:hidden;pointer-events:none}.auth-gate{po
   .odometer-camera-actions .soft-btn{flex:1}
   .odometer-camera-actions .text-btn{flex-shrink:0}
 }
+
+/* Expense month boundaries and receipt preview only. */
+.expense-month th{font-weight:800;background:var(--surface,#f1f5f5);text-align:start}
+.expense-month-total td{font-weight:700;border-bottom:2px solid var(--line)}
+.receipt-camera{min-width:0;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.receipt-camera .form-image-actions{flex-wrap:wrap}
+.receipt-camera img{max-height:280px;object-fit:contain}

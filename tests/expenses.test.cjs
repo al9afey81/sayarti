@@ -133,3 +133,16 @@ test('explicit 500 KWD car / 200 KWD trips: displayed totals stay separate, neve
   checkDisplays(530,225);
   assert.deepEqual(writes,[]);
 });
+test('monthly list and report sort months, show separate totals, and exclude empty months',()=>{
+  const {api,node}=setup();
+  const records=[{id:'july',date:'2026-07-02',category:'fuel',amount:12,currency:'KWD',vehicleId:'v1'},{id:'june',date:'2026-06-21',category:'fuel',amount:3,currency:'KWD',vehicleId:'v1'},{id:'june2',date:'2026-06-01',category:'fees',amount:4,currency:'KWD',vehicleId:'v1'}];
+  api.data.expenses=records;api.data.maintenance=[];
+  api.renderExpenses(records,api.totalsFor('v1'));
+  api.renderReport();
+  for(const html of [node('#expense-list').innerHTML,node('#report-content').innerHTML]){
+    assert.ok(html.indexOf('يونيو 2026')<html.indexOf('يوليو 2026'));
+    assert.equal((html.match(/إجمالي مصروفات الشهر/g)||[]).length,2);
+    assert.doesNotMatch(html,/أغسطس|[٠-٩۰-۹]/);
+    assert.match(html,/metric-number">7</);assert.match(html,/metric-number">12</);
+  }
+});
