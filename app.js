@@ -221,19 +221,19 @@
     disposeOdometerCamera?.();disposeOdometerCamera=null;
     activeForm=type;editingId=recordId?String(recordId):null;const v=vehicleOverride||activeVehicle();let title='',kicker=editingId?'تعديل السجل':'سجل جديد',html='',initialVehicleImage='';
     if(type==='vehicle'){
-      const x=vehicleOverride||{name:'',make:'Toyota',model:'Land Cruiser',trim:'',year:2026,color:'white',fuel:'diesel',plate:'',odometer:0,notes:''};
+      const x=vehicleOverride||{name:'',make:'',model:'',trim:'',year:'',color:'white',fuel:'diesel',plate:'',odometer:0,notes:''};
       pendingVehicleImage=undefined;
       initialVehicleImage=x.image||x.imageUrl||'';
-      const knownMake=VEHICLE_MAKES.includes(x.make),makeChoice=knownMake?x.make:'شركة أخرى',models=CATALOG.makes[x.make]||[],knownModel=models.includes(x.model),modelChoice=knownModel?x.model:'موديل آخر',trims=CATALOG.trims[x.make+'|'+x.model]||[],knownTrim=!x.trim||trims.includes(x.trim),trimChoice=!x.trim?'بدون فئة':knownTrim?x.trim:'فئة أخرى',knownColor=VEHICLE_COLORS.includes(x.color),selectedColor=knownColor?x.color:'custom_color';
+      const knownMake=VEHICLE_MAKES.includes(x.make),makeChoice=x.make?(knownMake?x.make:'شركة أخرى'):'',models=CATALOG.makes[x.make]||[],knownModel=models.includes(x.model),modelChoice=x.model?(knownModel?x.model:'موديل آخر'):'',trims=CATALOG.trims[x.make+'|'+x.model]||[],knownTrim=!x.trim||trims.includes(x.trim),trimChoice=!x.trim?'بدون فئة':knownTrim?x.trim:'فئة أخرى',knownColor=VEHICLE_COLORS.includes(x.color),selectedColor=knownColor?x.color:'custom_color';
       title=editingId?'تعديل بيانات المركبة':'إضافة مركبة';kicker='مرآب سيارتي';
       html=field('اسم المركبة (اختياري)','name','text',x.name,{required:false,placeholder:'مثال: شقران أو الجيب'})
-        +select('الشركة المصنعة','make',[...VEHICLE_MAKES,'شركة أخرى'],makeChoice)
-        +`<label class="field" id="custom-make-field"${knownMake?' hidden':''}><span>اسم الشركة <em>*</em></span><input name="customMake" value="${esc(knownMake?'':x.make)}" placeholder="اكتب اسم الشركة"${knownMake?'':' required'}></label>`
-        +select('الموديل','model',[...models,'موديل آخر'],modelChoice)
-        +`<label class="field" id="custom-model-field"${knownModel?' hidden':''}><span>اسم الموديل <em>*</em></span><input name="customModel" value="${esc(knownModel?'':x.model)}" placeholder="اكتب اسم الموديل"${knownModel?'':' required'}></label>`
+        +select('الشركة المصنعة','make',[{value:'',text:'اختر الشركة'},...VEHICLE_MAKES,'شركة أخرى'],makeChoice)
+        +`<label class="field" id="custom-make-field"${makeChoice==='شركة أخرى'?'':' hidden'}><span>اسم الشركة <em>*</em></span><input name="customMake" value="${esc(knownMake?'':x.make)}" placeholder="اكتب اسم الشركة"${makeChoice==='شركة أخرى'?' required':''}></label>`
+        +select('الموديل','model',[{value:'',text:'اختر الموديل'},...models,'موديل آخر'],modelChoice)
+        +`<label class="field" id="custom-model-field"${modelChoice==='موديل آخر'?'':' hidden'}><span>اسم الموديل <em>*</em></span><input name="customModel" value="${esc(knownModel?'':x.model)}" placeholder="اكتب اسم الموديل"${modelChoice==='موديل آخر'?' required':''}></label>`
         +select('الفئة / الطراز','trim',['بدون فئة',...trims,'فئة أخرى'],trimChoice)
         +`<label class="field" id="custom-trim-field"${trimChoice==='فئة أخرى'?'':' hidden'}><span>اسم الفئة <em>*</em></span><input name="customTrim" value="${esc(trimChoice==='فئة أخرى'?x.trim:'')}" placeholder="اكتب اسم الفئة"${trimChoice==='فئة أخرى'?' required':''}></label>`
-        +select('سنة الصنع','year',VEHICLE_YEARS,String(x.year||2026))+select('اللون','color',[...VEHICLE_COLORS.map(value=>({value,text:fixedLabel(value)})),{value:'custom_color',text:'لون آخر'}],selectedColor)
+        +select('سنة الصنع','year',[{value:'',text:'اختر سنة الصنع'},...(x.year&&!VEHICLE_YEARS.includes(String(x.year))?[String(x.year)]:[]),...VEHICLE_YEARS],String(x.year||''))+select('اللون','color',[...VEHICLE_COLORS.map(value=>({value,text:fixedLabel(value)})),{value:'custom_color',text:'لون آخر'}],selectedColor)
         +`<label class="field" id="custom-color-field"${knownColor?' hidden':''}><span>اسم اللون <em>*</em></span><input name="customColor" type="text" value="${esc(knownColor?'':x.color)}" placeholder="مثال: لؤلؤي"${knownColor?'':' required'}></label>`
         +select('نوع الوقود','fuel',['gasoline','diesel','hybrid','electric','other'].map(value=>({value,text:fixedLabel(value)})),x.fuel)+field('رقم اللوحة (اختياري)','plate','text',x.plate,{required:false})+field('العداد الحالي (كم)','odometer','number',x.odometer,{min:0})+`<div class="field full vehicle-image-field" id="vehicle-image-field"><span>صورة المركبة</span><div class="form-image-preview"><img id="form-vehicle-image-preview" alt="صورة المركبة" hidden><div id="form-vehicle-image-placeholder" class="form-image-placeholder">⌁</div></div><div class="form-image-actions"><button type="button" class="soft-btn" id="form-change-image" data-action="choose-form-vehicle-image">إضافة صورة المركبة</button><button type="button" class="text-btn danger-text" id="form-delete-image" data-action="delete-form-vehicle-image" hidden>حذف الصورة</button></div><input id="form-vehicle-image-input" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden></div>`+area('ملاحظات','notes',x.notes)
     }
@@ -258,7 +258,7 @@
     const form=$('#app-form'),make=$('[name=make]',form),model=$('[name=model]',form),trim=$('[name=trim]',form),color=$('[name=color]',form);
     const customMake=$('[name=customMake]',form),customModel=$('[name=customModel]',form),customTrim=$('[name=customTrim]',form),customColor=$('[name=customColor]',form);
     const toggle=(input,wrapper,show)=>{wrapper.hidden=!show;input.required=show};
-    const options=(values,selected)=>values.map(value=>`<option${value===selected?' selected':''}>${esc(value)}</option>`).join('');
+    const options=(values,selected)=>values.map(value=>`<option value="${esc(value)}"${value===selected?' selected':''}>${esc(value)}</option>`).join('');
     const updateTrim=(preferred='')=>{
       const actualMake=make.value==='شركة أخرى'?customMake.value.trim():make.value;
       const actualModel=model.value==='موديل آخر'?customModel.value.trim():model.value;
@@ -272,8 +272,8 @@
     const updateModel=(preferred='')=>{
       const actualMake=make.value==='شركة أخرى'?customMake.value.trim():make.value;
       const values=CATALOG.makes[actualMake]||[];
-      const selected=preferred?(values.includes(preferred)?preferred:'موديل آخر'):(values[0]||'موديل آخر');
-      model.innerHTML=options([...values,'موديل آخر'],selected);
+      const selected=preferred?(values.includes(preferred)?preferred:'موديل آخر'):'';
+      model.innerHTML=`<option value=""${selected===''?' selected':''}>اختر الموديل</option>`+options([...values,'موديل آخر'],selected);
       if(selected==='موديل آخر'&&preferred)customModel.value=preferred;
       toggle(customModel,$('#custom-model-field'),selected==='موديل آخر');
       updateTrim('');
