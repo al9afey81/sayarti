@@ -1,64 +1,98 @@
-// Run: node tests/vehicle-add.browser.cjs (Chrome installed). Uses an isolated temporary profile.
-﻿const fs=require('fs'),path=require('path'),os=require('os'),http=require('http'),{spawn}=require('child_process'),assert=require('assert/strict');
+// NODE_PATH must point to Playwright. ENGINE=webkit and optional WEBKIT_EXECUTABLE
+// select WebKit. Every test uses isolated storage, never a user's browser profile.
+const {chromium,webkit,devices}=require('playwright');
+const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'..'),KEY='sayyarati-data-v3';
+const vehicle=(id,name)=>({id,name,make:'Jeep',model:'Wrangler',trim:'',year:2024,color:'white',fuel:'gasoline',plate:'',image:'',imageUrl:'',odometer:100,odometerUpdatedAt:'2026-01-01',serviceInterval:10000,notes:'preserve',createdAt:'2026-01-01'});
+const fixture={version:3,activeVehicleId:'photo-test',vehicles:[vehicle('shaqran','شقران'),vehicle('jeep','الجيب'),vehicle('photo-test','اختبار الصورة')],maintenance:[],expenses:[{id:'e1',vehicleId:'shaqran',date:'2026-01-01',category:'fuel',currency:'KWD',amount:12}],trips:[]};
+fixture.vehicles[0].image='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=';
+fixture.vehicles[1].imageUrl='assets/car.png';
+const server=http.createServer((req,res)=>{
+  const file=path.join(root,new URL(req.url,'http://localhost').pathname==='/'?'index.html':new URL(req.url,'http://localhost').pathname);
+  if(!file.startsWith(root+path.sep)){res.writeHead(403);return res.end()}
+  try{res.setHeader('Content-Type',file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':file.endsWith('.html')?'text/html':'image/png');res.end(fs.readFileSync(file))}catch{res.writeHead(404);res.end()}
+});
 (async()=>{
-const root=path.resolve(__dirname,'..'),profile=fs.mkdtempSync(path.join(os.tmpdir(),'sayarti-vehicle-test-'));
-const server=http.createServer((req,res)=>{try{const file=path.join(root,req.url==='/'?'index.html':req.url.split('?')[0]);let body=fs.readFileSync(file);if(file.endsWith('index.html'))body=body.toString().replace(/<script[^>]*src="(?:supabase-config[^" ]*|https:[^"]*|auth[^" ]*)"[^>]*><\/script>/g,'');res.setHeader('Content-Type',file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':file.endsWith('.html')?'text/html':'application/octet-stream');res.end(body)}catch{res.writeHead(404);res.end()}});await new Promise(r=>server.listen(0,'127.0.0.1',r));
-const child=spawn('C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',['--headless=new','--remote-debugging-port=0','--user-data-dir='+profile,'--no-first-run','--no-default-browser-check','about:blank'],{windowsHide:true,stdio:'ignore'});let ws,call;const errors=[];
-try{
-const pf=path.join(profile,'DevToolsActivePort');for(let i=0;!fs.existsSync(pf)&&i<100;i++)await new Promise(r=>setTimeout(r,100));const port=fs.readFileSync(pf,'utf8').split('\n')[0],targets=await(await fetch('http://127.0.0.1:'+port+'/json')).json();ws=new WebSocket(targets.find(t=>t.type==='page').webSocketDebuggerUrl);await new Promise((r,j)=>{ws.onopen=r;ws.onerror=j});let id=0;const pending=new Map();ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.method==='Runtime.exceptionThrown')errors.push(m.params.exceptionDetails.exception?.description||m.params.exceptionDetails.text);if(m.method==='Runtime.consoleAPICalled'&&m.params.type==='error')errors.push(JSON.stringify(m.params.args));if(m.id){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(Error(JSON.stringify(m.error))):p.resolve(m.result)}};call=(method,params={})=>new Promise((resolve,reject)=>{const n=++id;pending.set(n,{resolve,reject});ws.send(JSON.stringify({id:n,method,params}))});
-const ev=async expression=>{const r=await call('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(r.exceptionDetails)throw Error(JSON.stringify(r.exceptionDetails));return r.result.value};
-await call('Page.enable');await call('Runtime.enable');await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await call('Page.addScriptToEvaluateOnNewDocument',{source:`window.fetch=async()=>({ok:true,json:async()=>({result:'success',rates:Object.fromEntries(['KWD','TRY','EUR','USD','SAR','IQD','QAR','BHD','AED','OMR'].map(x=>[x,1]))})});`});
-const wait=async()=>{await new Promise(r=>setTimeout(r,300));for(let i=0;i<100;i++){if(await ev(`document.readyState==='complete'&&!!document.querySelector('#vehicle-list')`))return;await new Promise(r=>setTimeout(r,50))}throw Error('Page timeout')};await call('Page.navigate',{url:'http://127.0.0.1:'+server.address().port+'/'});await wait();
-const shaqran={id:'shaqran',name:'شقران',make:'Great Wall / GWM',model:'Poer',trim:'Premium',year:2025,color:'white',fuel:'diesel',plate:'unchanged',image:'',imageUrl:'',odometer:12450,odometerUpdatedAt:'2026-01-01T00:00:00.000Z',serviceInterval:10000,notes:'unchanged',createdAt:'2026-01-01T00:00:00.000Z'};
-const fixture={version:3,activeVehicleId:null,vehicles:[shaqran,{...shaqran,id:'existing-second',name:'',make:'',model:'',trim:'',year:0}],maintenance:[{id:'m1',vehicleId:'shaqran',types:['engine_oil'],currency:'KWD',date:'2026-01-01',odometer:12000,cost:10}],expenses:[{id:'e1',vehicleId:'shaqran',category:'fuel',amount:15,currency:'KWD',date:'2026-01-01',receipt:'unchanged'}],trips:[{id:'t1',vehicleId:'shaqran',type:'local',currency:'KWD',date:'2026-01-01',expenses:[],totalCost:0,distanceKm:null}]};await ev(`localStorage.setItem('sayyarati-data-v3',${JSON.stringify(JSON.stringify(fixture))})`);
-const reload=async()=>{await call('Page.reload');await wait()};await reload();const state=()=>ev(`JSON.parse(localStorage.getItem('sayyarati-data-v3'))`),click=s=>ev(`document.querySelector(${JSON.stringify(s)}).click()`),set=(n,v)=>ev(`(()=>{const el=document.querySelector('#app-form [name=${n}]');el.value=${JSON.stringify(v)};el.dispatchEvent(new Event('change',{bubbles:true}));return el.value})()`),values=()=>ev(`['make','model','year'].map(n=>document.querySelector('#app-form [name='+n+']').value)`);
-const protectedBefore=await state();
-const submit=async()=>{assert.equal(await ev(`document.querySelector('#app-form').checkValidity()`),true);await ev(`document.querySelector('#app-form button[type=submit]').click()`);assert.equal(await ev(`document.querySelector('#app-dialog').open`),false)};
-const nissanForm=async()=>{await set('make','Nissan');assert.equal(await ev(`document.querySelector('[name=model]').value`),'');await set('model','Patrol');await set('trim','فئة أخرى');await set('customTrim','LE');await set('year','2024')};
-assert.equal(await ev(`document.querySelector('[data-id="existing-second"] .model').textContent.includes('Toyota')`),false);
-await click('[data-action="edit-vehicle-card"][data-id="existing-second"]');assert.deepEqual(await values(),['','','']);await nissanForm();await submit();await reload();let d=await state();assert.deepEqual([d.vehicles[1].id,d.vehicles[1].make,d.vehicles[1].model,d.vehicles[1].trim,d.vehicles[1].year],['existing-second','Nissan','Patrol','LE',2024]);console.log('PASS: incomplete second vehicle editable through UI; ID retained after reload.');
-await click('[data-action="home"]');await click('[data-action="add-vehicle"]');assert.deepEqual(await values(),['','','']);assert.equal(await ev(`document.querySelector('#app-form').checkValidity()`),false);await ev(`document.querySelector('#app-form button[type=submit]').click()`);assert.equal(await ev(`document.querySelector('#vehicle-add-error').hidden`),false);assert.equal((await state()).vehicles.length,2);assert.match(await ev(`document.querySelector('#vehicle-add-error').textContent`),/\u062a\u062d\u0642\u0642/);console.log('PASS: incomplete form shows readable Arabic validation error and creates no vehicle.');await nissanForm();await submit();await reload();d=await state();const nissan=d.vehicles.at(-1);assert.deepEqual([nissan.make,nissan.model,nissan.trim,nissan.year],['Nissan','Patrol','LE',2024]);assert.equal(await ev(`document.querySelector('#vehicle-model').textContent`),'Nissan Patrol LE 2024');console.log('PASS: add Nissan / Patrol / LE / 2024; reload preserves storage and display.');
-await click('[data-action="home"]');await click('[data-action="add-vehicle"]');await set('make','Land Rover');await set('model','Range Rover');await set('trim','HSE');await set('year','2016');await submit();await reload();d=await state();assert.deepEqual([d.vehicles.at(-1).make,d.vehicles.at(-1).model,d.vehicles.at(-1).trim,d.vehicles.at(-1).year],['Land Rover','Range Rover','HSE',2016]);assert.equal(await ev(`document.querySelector('#vehicle-model').textContent`),'Land Rover Range Rover HSE 2016');console.log('PASS: add Range Rover / HSE / 2016; reload does not replace it with Toyota.');
-await click('[data-action="home"]');await click('[data-action="open-vehicle"][data-id="shaqran"]');assert.equal(await ev(`document.querySelector('#vehicle-name').textContent`),'شقران');await click('[data-action="home"]');await click('[data-action="open-vehicle"][data-id="'+nissan.id+'"]');assert.equal(await ev(`document.querySelector('#vehicle-model').textContent`),'Nissan Patrol LE 2024');d=await state();assert.deepEqual(d.vehicles[0],shaqran);assert.deepEqual(d.maintenance,protectedBefore.maintenance);assert.deepEqual(d.expenses,protectedBefore.expenses);assert.deepEqual(d.trips,protectedBefore.trips);assert.equal(d.vehicles.length,4);console.log('PASS: independent switching; Shaqran fixture unchanged; no vehicle deleted.');
-await click('[data-action="home"]');await ev(`document.querySelector('#language-select').value='en';document.querySelector('#language-select').dispatchEvent(new Event('change',{bubbles:true}))`);await click('[data-action="add-vehicle"]');await set('make','Nissan');await set('model','موديل آخر');assert.equal(await ev(`document.querySelector('#custom-model-field').hidden`),false);await set('customModel','Test Model');await set('trim','فئة أخرى');await set('customTrim','Test Trim');await set('year','2016');await submit();d=await state();assert.deepEqual([d.vehicles.at(-1).model,d.vehicles.at(-1).trim],['Test Model','Test Trim']);console.log('PASS: custom model and trim values remain stable in English UI.');console.log('Console errors before fault injection:',errors);assert.deepEqual(errors,[]);
-await click('[data-action="home"]');await click('[data-action="add-vehicle"]');await nissanForm();
-const beforeFailure=await state();
-await ev(`window.originalSetItem=Storage.prototype.setItem;Storage.prototype.setItem=function(key,value){if(key==='sayyarati-data-v3')throw new DOMException('Storage quota exceeded','QuotaExceededError');return window.originalSetItem.call(this,key,value)};document.querySelector('#app-form button[type=submit]').click()`);
-assert.equal(await ev(`document.querySelector('#app-dialog').open`),true);
-assert.equal(await ev(`document.querySelector('#vehicle-add-error').hidden`),false);
-assert.equal(await ev(`document.querySelector('[name=model]').value`),'Patrol');
-assert.deepEqual(await state(),beforeFailure);assert.deepEqual(errors,[]);
-console.log('PASS: simulated quota failure keeps form and entries; stored data and activeVehicleId unchanged; no uncaught error.');
-await ev(`Storage.prototype.setItem=window.originalSetItem`);await submit();
-let retried=await state();assert.equal(retried.vehicles.length,beforeFailure.vehicles.length+1);assert.deepEqual(retried.vehicles.slice(0,-1),beforeFailure.vehicles);assert.equal(retried.activeVehicleId,retried.vehicles.at(-1).id);
-await reload();retried=await state();assert.equal(retried.vehicles.length,beforeFailure.vehicles.length+1);assert.deepEqual(retried.vehicles[0],shaqran);assert.deepEqual(retried.maintenance,protectedBefore.maintenance);assert.deepEqual(retried.expenses,protectedBefore.expenses);assert.deepEqual(retried.trips,protectedBefore.trips);assert.deepEqual(errors,[]);
-console.log('PASS: retry adds exactly one vehicle and activates it; reload preserves both requested vehicles and all existing records.');
-await click('[data-action="home"]');await click('[data-action="add-vehicle"]');await nissanForm();
-const originalBytes=await ev(`(async()=>{
- const canvas=document.createElement('canvas');canvas.width=4000;canvas.height=3000;
- const ctx=canvas.getContext('2d'),pixels=ctx.createImageData(4000,3000);let seed=123456;
- for(let i=0;i<pixels.data.length;i+=4){seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;pixels.data[i]=seed&255;pixels.data[i+1]=(seed>>>8)&255;pixels.data[i+2]=(seed>>>16)&255;pixels.data[i+3]=255}
- ctx.putImageData(pixels,0,0);const blob=await new Promise(r=>canvas.toBlob(r,'image/png'));
- window.largePhoto=new File([blob],'large-photo.png',{type:'image/png'});
- const input=document.querySelector('#form-vehicle-image-input'),transfer=new DataTransfer();transfer.items.add(window.largePhoto);input.files=transfer.files;input.dispatchEvent(new Event('change',{bubbles:true}));return blob.size;
-})()`);
-assert.ok(originalBytes>25*1024*1024);
-const photoReady=async()=>{for(let i=0;i<200;i++){if(await ev(`!document.querySelector('#app-form [type=submit]').disabled`))return;await new Promise(r=>setTimeout(r,50))}throw Error('Photo compression timed out')};
-await photoReady();
-const prepared=await ev(`document.querySelector('#form-vehicle-image-preview').src`);assert.ok(prepared.startsWith('data:image/jpeg;'));assert.ok(prepared.length<=240*1024);
-await submit();await reload();
-const withPhoto=await state();assert.equal(withPhoto.vehicles.at(-1).image,prepared);
-const visible=await ev(`(()=>{const img=document.querySelector('#vehicle-photo');return !img.hidden&&img.complete&&img.naturalWidth>0&&img.naturalWidth<=1600})()`);assert.equal(visible,true);
-assert.deepEqual(withPhoto.vehicles[0],shaqran);assert.deepEqual(withPhoto.expenses,protectedBefore.expenses);assert.deepEqual(withPhoto.trips,protectedBefore.trips);
-console.log('PASS: large PNG '+originalBytes+' bytes compressed to JPEG '+prepared.length+' encoded characters; photo visible after save and reload.');
-const beforePhotoFailure=await state();
-await ev(`(async()=>{window.originalSetItem=Storage.prototype.setItem;Storage.prototype.setItem=function(){throw new DOMException('Full','QuotaExceededError')};const canvas=document.createElement('canvas');canvas.width=100;canvas.height=100;const blob=await new Promise(r=>canvas.toBlob(r,'image/jpeg'));const dt=new DataTransfer();dt.items.add(new File([blob],'photo.jpeg',{type:'image/jpeg'}));const input=document.querySelector('#vehicle-photo-input');input.files=dt.files;input.dispatchEvent(new Event('change',{bubbles:true}))})()`);
-for(let i=0;i<100;i++){if(await ev(`document.querySelector('.vehicle-photo [data-image-status]')?.textContent.includes('Could not')`))break;await new Promise(r=>setTimeout(r,50))}
-assert.match(await ev(`document.querySelector('.vehicle-photo [data-image-status]').textContent`),/Could not/);assert.deepEqual(await state(),beforePhotoFailure);await ev(`Storage.prototype.setItem=window.originalSetItem`);
-await ev(`(()=>{const dt=new DataTransfer();dt.items.add(new File(['invalid'],'photo.heic',{type:'image/heic'}));const input=document.querySelector('#vehicle-photo-input');input.files=dt.files;input.dispatchEvent(new Event('change',{bubbles:true}))})()`);
-for(let i=0;i<100;i++){if(await ev(`document.querySelector('.vehicle-photo [data-image-status]')?.textContent.includes('HEIC')`))break;await new Promise(r=>setTimeout(r,50))}
-assert.match(await ev(`document.querySelector('.vehicle-photo [data-image-status]').textContent`),/HEIC/);assert.deepEqual(await state(),beforePhotoFailure);assert.deepEqual(errors,[]);
-console.log('PASS: storage failure and undecodable HEIC show clear errors; existing photo and records retained; zero JS errors.');
-console.log('All tests used a temporary Chrome profile; real user storage was not accessed.');
-}finally{if(call)await call('Browser.close').catch(()=>{});if(ws)ws.close();child.kill();server.close()}
-})().catch(e=>{console.error(e);process.exitCode=1});
+  await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;
+  try{
+    const engine=process.env.ENGINE||'chromium';
+    browser=await (engine==='webkit'?webkit:chromium).launch({headless:true,...(engine==='webkit'?(process.env.WEBKIT_EXECUTABLE?{executablePath:process.env.WEBKIT_EXECUTABLE}:{}):{channel:'chrome'})});
+    const context=await browser.newContext({...devices['iPhone 13']});
+    await context.route('**/auth.js*',r=>r.fulfill({contentType:'application/javascript',body:''}));
+    await context.route('https://cdn.jsdelivr.net/**',r=>r.abort());await context.route('https://fonts.**',r=>r.abort());
+    await context.route('https://open.er-api.com/**',r=>r.fulfill({json:{result:'success',rates:Object.fromEntries(['KWD','TRY','EUR','USD','SAR','IQD','QAR','BHD','AED','OMR'].map(c=>[c,1]))}}));
+    const page=await context.newPage(),uncaught=[],diagnostics=[];
+    page.on('pageerror',e=>uncaught.push(e.message));page.on('console',m=>{if(m.type()==='error'&&m.text().includes('[vehicle-photo]'))diagnostics.push(m.text())});
+    await page.goto('http://127.0.0.1:'+server.address().port,{waitUntil:'load'});
+    await page.evaluate(({KEY,fixture})=>localStorage.setItem(KEY,JSON.stringify(fixture)),{KEY,fixture});
+    const ready=async()=>{await page.locator('#auth-gate').evaluate(el=>{el.hidden=true;document.body.classList.add('auth-ready')})};
+    await page.reload();await ready();const state=()=>page.evaluate(KEY=>JSON.parse(localStorage.getItem(KEY)),KEY),baseline=await state();
+    const protectedData=async()=>{const d=await state();assert.deepEqual(d.vehicles.slice(0,2),baseline.vehicles.slice(0,2));for(const key of ['maintenance','expenses','trips'])assert.deepEqual(d[key],baseline[key])};
+    const visiblePhoto=async()=>{await page.waitForFunction(()=>{const img=document.querySelector('#vehicle-photo');return !img.hidden&&img.complete&&img.naturalWidth>0});assert.ok(await page.locator('#vehicle-photo').evaluate(el=>el.naturalWidth<=1280&&el.naturalHeight<=1280))};
+    const showReport=async()=>{await page.locator('[data-action="vehicle-report"]').click();await page.waitForFunction(()=>{const img=document.querySelector('#report-content .report-vehicle img');return img?.complete&&img.naturalWidth>0});await page.evaluate(()=>{window.printedPhotoReady=false;window.print=()=>{const img=document.querySelector('#report-content .report-vehicle img');window.printedPhotoReady=!!(img?.complete&&img.naturalWidth)}});await page.locator('#print-report').click();await page.waitForFunction(()=>window.printedPhotoReady);await page.locator('#report-dialog').evaluate(el=>el.close())};
+    const storedPhoto=async id=>page.evaluate(async id=>{const db=await new Promise((resolve,reject)=>{const request=indexedDB.open('sayyarati-vehicle-photos',1);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)});try{const blob=await new Promise((resolve,reject)=>{const tx=db.transaction('images','readonly'),req=tx.objectStore('images').get(id);tx.oncomplete=()=>resolve(req.result);tx.onerror=()=>reject(tx.error)});return{size:blob.size,type:blob.type}}finally{db.close()}},id);
+    await page.locator('#vehicle-photo-input').setInputFiles(path.join(root,'assets','car.png'));
+    await page.waitForFunction(KEY=>!!JSON.parse(localStorage.getItem(KEY)).vehicles[2].imageId,KEY);
+    await visiblePhoto();let saved=await state();assert.equal(saved.vehicles[2].image,'');assert.equal(saved.vehicles[2].imageUrl,'');const firstPhoto=await storedPhoto(saved.vehicles[2].imageId);assert.equal(firstPhoto.type,'image/jpeg');assert.ok(firstPhoto.size<=72*1024);
+    await page.reload();await ready();await visiblePhoto();await showReport();await protectedData();assert.equal(diagnostics.length,0);
+    console.log('PASS: photo stored as JPEG Blob in IndexedDB; only imageId in LocalStorage; reload, report and print work. Engine='+engine);
+    const originalBytes=await page.evaluate(async()=>{
+      const canvas=document.createElement('canvas');canvas.width=4000;canvas.height=3000;
+      const ctx=canvas.getContext('2d'),pixels=ctx.createImageData(4000,3000);let seed=123456;
+      for(let i=0;i<pixels.data.length;i+=4){seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;pixels.data[i]=seed&255;pixels.data[i+1]=(seed>>>8)&255;pixels.data[i+2]=(seed>>>16)&255;pixels.data[i+3]=255}
+      ctx.putImageData(pixels,0,0);const blob=await new Promise(r=>canvas.toBlob(r,'image/png'));canvas.width=0;canvas.height=0;
+      const dt=new DataTransfer();dt.items.add(new File([blob],'large.png',{type:'image/png'}));const input=document.querySelector('#vehicle-photo-input');input.files=dt.files;input.dispatchEvent(new Event('change',{bubbles:true}));return blob.size;
+    });assert.ok(originalBytes>25*1024*1024);
+    const priorPhotoId=saved.vehicles[2].imageId;
+    await page.waitForFunction(({KEY,old})=>JSON.parse(localStorage.getItem(KEY)).vehicles[2].imageId!==old,{KEY,old:priorPhotoId});
+    saved=await state();const largePhoto=await storedPhoto(saved.vehicles[2].imageId);assert.ok(largePhoto.size<=72*1024);assert.equal(saved.vehicles[2].image,'');assert.deepEqual(await storedPhoto(priorPhotoId),firstPhoto);await page.reload();await ready();await visiblePhoto();await showReport();await protectedData();
+    console.log('PASS: '+originalBytes+' byte PNG compressed to '+largePhoto.size+' byte JPEG in IndexedDB; old stored image retained.');
+    await page.locator('[data-action="add-vehicle"]:visible').click();
+    await page.locator('[name=make]').selectOption('Nissan');await page.locator('[name=model]').selectOption('Patrol');await page.locator('[name=year]').selectOption('2024');
+    await page.locator('#app-form [type=submit]').click();await page.waitForFunction(()=>!document.querySelector('#app-dialog').open);
+    // Exhaust actual quota in the isolated context, without mocking setItem.
+    const quota=await page.evaluate(()=>{let low=0,high=12*1024*1024,name='';while(high-low>1024){const mid=Math.floor((low+high)/2);try{localStorage.setItem('photo-test-filler','x'.repeat(mid));low=mid}catch(e){name=e.name;high=mid}}localStorage.setItem('photo-test-filler','x'.repeat(Math.max(0,low-28*1024)));return name});
+    assert.equal(quota,'QuotaExceededError');await page.locator('#vehicle-photo-input').setInputFiles(path.join(root,'assets','car.png'));
+    await page.waitForFunction(KEY=>!!JSON.parse(localStorage.getItem(KEY)).vehicles.at(-1).imageId,KEY);
+    saved=await state();assert.equal(saved.vehicles.at(-1).image,'');assert.equal(diagnostics.length,0);
+    await page.reload();await ready();await visiblePhoto();await showReport();await protectedData();
+    console.log('PASS: photo saved with nearly full LocalStorage; no application QuotaExceededError; protected data unchanged.');
+    await page.evaluate(()=>localStorage.removeItem('photo-test-filler'));
+    // Photo selected inside the add form must be saved too, not just previewed.
+    await page.locator('[data-action="add-vehicle"]:visible').click();
+    await page.locator('[name=make]').selectOption('Nissan');await page.locator('[name=model]').selectOption('Patrol');await page.locator('[name=year]').selectOption('2024');
+    await page.locator('#form-vehicle-image-input').setInputFiles(path.join(root,'assets','car.png'));
+    await page.waitForFunction(()=>document.querySelector('#form-vehicle-image-preview').src.startsWith('data:image/jpeg;')&&!document.querySelector('#app-form [type=submit]').disabled);
+    const count=(await state()).vehicles.length;await page.locator('#app-form [type=submit]').click();await page.waitForFunction(()=>!document.querySelector('#app-dialog').open);
+    assert.equal((await state()).vehicles.length,count+1);await page.reload();await ready();await visiblePhoto();await showReport();await protectedData();
+    // Replacing a photo from the edit form updates the same vehicle, not a new one.
+    const editedId=(await state()).activeVehicleId;
+    await page.locator('[data-action="edit-vehicle"]').click();await page.locator('#form-vehicle-image-input').setInputFiles(path.join(root,'assets','fleet-hero.png'));
+    await page.waitForFunction(()=>!document.querySelector('#app-form [type=submit]').disabled);
+    await page.locator('#app-form [type=submit]').click();await page.waitForFunction(()=>!document.querySelector('#app-dialog').open);
+    assert.equal((await state()).vehicles.length,count+1);assert.equal((await state()).activeVehicleId,editedId);await page.reload();await ready();await visiblePhoto();await showReport();await protectedData();
+    console.log('PASS: photos saved through add/edit forms, persist after reload and appear in report; no duplicate vehicle.');
+    const currentId=(await state()).activeVehicleId;
+    const switchTo=async id=>{await page.locator('[data-action="home"]:visible').first().click();await page.locator('.vehicle-card[data-id="'+id+'"]').click()};
+    for(const id of ['shaqran','jeep']){await switchTo(id);await page.waitForFunction(()=>{const img=document.querySelector('#vehicle-photo');return img.complete&&img.naturalWidth>0});await showReport()}
+    await switchTo(currentId);await visiblePhoto();await protectedData();
+    console.log('PASS: legacy base64 and imageUrl photos still render and print; Shaqran and Jeep records unchanged.');
+    const beforeExport=await state(),downloadPromise=page.waitForEvent('download');await page.locator('#export-btn').evaluate(el=>el.click());
+    const download=await downloadPromise,stream=await download.createReadStream(),chunks=[];for await(const chunk of stream)chunks.push(chunk);
+    const backup=JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    assert.ok(backup.vehicles.at(-1).image.startsWith('data:image/jpeg;base64,'));assert.equal(backup.vehicles.at(-1).imageId,undefined);assert.deepEqual(backup.vehicles.slice(0,2),baseline.vehicles.slice(0,2));assert.deepEqual(await state(),beforeExport);
+    console.log('PASS: backup includes IndexedDB photos without putting base64 back into LocalStorage.');
+    await page.evaluate(()=>{window.originalPhotoAdd=IDBObjectStore.prototype.add;IDBObjectStore.prototype.add=function(){throw new DOMException('Simulated image storage failure','UnknownError')}});
+    await page.locator('#vehicle-photo-input').setInputFiles(path.join(root,'assets','car.png'));
+    await page.waitForFunction(()=>document.querySelector('[data-image-status]')?.textContent.includes('Console'));
+    assert.deepEqual(await state(),beforeExport);assert.ok(diagnostics.some(text=>text.includes('indexedDB-write')&&text.includes('UnknownError')));
+    await page.evaluate(()=>IDBObjectStore.prototype.add=window.originalPhotoAdd);await visiblePhoto();
+    console.log('PASS: IndexedDB failure preserves old photo reference and all vehicle data.');
+    const before=await state();await page.locator('#vehicle-photo-input').setInputFiles({name:'bad.heic',mimeType:'image/heic',buffer:Buffer.from('invalid')});
+    await page.waitForFunction(()=>document.querySelector('[data-image-status]')?.textContent.includes('HEIC'));assert.deepEqual(await state(),before);assert.ok(diagnostics.some(text=>text.includes('decode')&&text.includes('EncodingError')));
+    await page.evaluate(()=>{window.originalToBlob=HTMLCanvasElement.prototype.toBlob;HTMLCanvasElement.prototype.toBlob=function(callback){callback(null)}});
+    await page.locator('#vehicle-photo-input').setInputFiles(path.join(root,'assets','car.png'));await page.waitForFunction(()=>document.querySelector('[data-image-status]')?.textContent.includes('Console'));
+    assert.deepEqual(await state(),before);assert.ok(diagnostics.some(text=>text.includes('canvas-toBlob')));await page.evaluate(()=>HTMLCanvasElement.prototype.toBlob=window.originalToBlob);
+    assert.deepEqual(uncaught,[]);await protectedData();console.log('PASS: separate decode/toBlob diagnostics; failed uploads preserve existing photo; no uncaught JS errors.');
+  }finally{if(browser)await browser.close();server.close()}
+})().catch(error=>{console.error(error);process.exitCode=1});

@@ -87,7 +87,7 @@
       trips:(source.trips||[]).map(r=>{const distance=num(r.km),end=num(r.endOdometer)||(num(r.startOdometer)+distance);return{id:String(r.id||uid('t')),vehicleId:'shaqran',date:r.date||today(),start:r.start||'غير محدد',destination:r.destination||'غير محدد',startOdometer:num(r.startOdometer)||Math.max(0,end-distance),endOdometer:end,type:r.type||'داخلية',cost:num(r.cost),currency:'KWD',notes:r.notes||''}})});
   }
   function normalize(source){
-    const vehicles=(source.vehicles||[]).map(v=>({id:String(v.id||uid('v')),name:v.name||'',make:v.make||'',model:v.model||'',trim:v.trim||'',year:num(v.year),color:fixedCode(v.color||''),fuel:fixedCode(v.fuel||''),plate:v.plate||'',image:v.image||'',imageUrl:v.imageUrl||'',odometer:num(v.odometer),odometerUpdatedAt:v.odometerUpdatedAt||stamp(),serviceInterval:Math.max(1000,num(v.serviceInterval)||10000),notes:v.notes||'',createdAt:v.createdAt||stamp()}));
+    const vehicles=(source.vehicles||[]).map(v=>({id:String(v.id||uid('v')),name:v.name||'',make:v.make||'',model:v.model||'',trim:v.trim||'',year:num(v.year),color:fixedCode(v.color||''),fuel:fixedCode(v.fuel||''),plate:v.plate||'',image:v.image||'',imageUrl:v.imageUrl||'',...(v.imageId?{imageId:v.imageId}:{}),odometer:num(v.odometer),odometerUpdatedAt:v.odometerUpdatedAt||stamp(),serviceInterval:Math.max(1000,num(v.serviceInterval)||10000),notes:v.notes||'',createdAt:v.createdAt||stamp()}));
     const firstId=vehicles[0]?.id||null;
     const validVehicle=id=>vehicles.some(v=>v.id===String(id))?String(id):firstId;
     const records=(items,prefix)=>Array.isArray(items)?items.map(r=>{const id=String(r.id||uid(prefix)),base={...r,id,vehicleId:validVehicle(vehicleIdOf(r)),currency:currencyCode(r.currency),...(prefix==='m'?{types:(r.types||[]).map(fixedCode)}:{}),...(prefix==='e'?{category:fixedCode(r.category)}:{}),...(prefix==='t'?{type:fixedCode(r.type)}:{})};if(prefix!=='t')return base;const hasExpenses=Array.isArray(r.expenses),legacyCost=num(r.cost),expenses=(hasExpenses?r.expenses:legacyCost?[{id:'legacy_'+id,type:'legacy_trip_cost',cost:legacyCost,maintenanceType:'',legacy:true}]:[]).map((item,index)=>({id:String(item.id||id+'_expense_'+index),type:tripExpenseCode(item.type||'legacy_trip_cost'),cost:num(item.cost),currency:currencyCode(item.currency||r.currency),maintenanceType:item.maintenanceType||'',...(item.legacy?{legacy:true}:{})}));const distanceKm=r.distanceKm!==undefined&&r.distanceKm!==null&&r.distanceKm!==''?num(r.distanceKm):(r.endOdometer!==undefined?Math.max(0,num(r.endOdometer)-num(r.startOdometer)):null);return{...base,expenses,totalCost:r.totalCost??expenses.reduce((sum,item)=>sum+num(item.cost),0),distanceKm}}):[];
@@ -144,8 +144,8 @@
     const fleetKm=data.vehicles.reduce((s,v)=>s+num(v.odometer),0),allTotals={};data.vehicles.forEach(v=>Object.entries(totalsFor(v.id)).forEach(([c,value])=>allTotals[c]=(allTotals[c]||0)+value));
     $('#fleet-count').innerHTML=metric(data.vehicles.length);$('#fleet-km').innerHTML=metric(fleetKm);$('#fleet-records').innerHTML=metric(data.maintenance.length+data.expenses.length+data.trips.length);$('#home-distance').innerHTML=metric(fleetKm,'كم');$('#home-trips').innerHTML=metric(data.trips.length,'رحلة');$('#home-expenses').innerHTML=totalsHTML(allTotals);
     const service=data.vehicles.map(v=>{const records=data.maintenance.filter(r=>r.vehicleId===v.id),last=[...records].sort((a,b)=>num(b.odometer)-num(a.odometer)||String(b.date).localeCompare(String(a.date)))[0],base=last?num(last.odometer):Math.floor(num(v.odometer)/v.serviceInterval)*v.serviceInterval;return{v,remaining:base+v.serviceInterval-v.odometer}}).sort((a,b)=>a.remaining-b.remaining)[0];$('#home-service').innerHTML=!service?'—':service.remaining<=0?'حان موعد الصيانة':'متبقي '+metric(service.remaining,'كم');
-    $('#vehicle-list').innerHTML=data.vehicles.map(v=>{const records=data.maintenance.filter(r=>r.vehicleId===v.id).length+data.expenses.filter(r=>r.vehicleId===v.id).length+data.trips.filter(r=>r.vehicleId===v.id).length,image=v.image||v.imageUrl||'';return`<article class="vehicle-card panel" data-action="open-vehicle" data-id="${v.id}" tabindex="0">${image?`<div class="vehicle-card-image"><img src="${esc(image)}" alt="صورة المركبة"></div>`:'<div class="vehicle-card-image vehicle-card-placeholder"><span>⌁</span></div>'}<div class="vehicle-card-body"><div class="vehicle-card-top"><span class="vehicle-card-icon">⌁</span><div class="vehicle-menu"><button class="icon-btn" data-action="edit-vehicle-card" data-id="${v.id}" aria-label="تعديل">✎</button><button class="icon-btn delete" data-action="delete-vehicle-card" data-id="${v.id}" aria-label="حذف">×</button></div></div><h2>${esc(vehicleTitle(v))}</h2><p class="model">${esc([v.make,v.model,v.trim,v.year].filter(Boolean).join(' '))}</p><div class="vehicle-card-specs"><div><small>العداد</small><strong>${metric(v.odometer,'كم')}</strong></div><div><small>السجلات</small><strong>${metric(records,'سجل')}</strong></div></div><span class="vehicle-open">فتح الملف ←</span></div></article>`}).join('');
-    $('#vehicle-empty').classList.toggle('show',!data.vehicles.length);
+    $('#vehicle-list').innerHTML=data.vehicles.map(v=>{const records=data.maintenance.filter(r=>r.vehicleId===v.id).length+data.expenses.filter(r=>r.vehicleId===v.id).length+data.trips.filter(r=>r.vehicleId===v.id).length,image=vehiclePhotoSource(v);return`<article class="vehicle-card panel" data-action="open-vehicle" data-id="${v.id}" tabindex="0">${image||v.imageId?`<div class="vehicle-card-image"><img${vehiclePhotoAttributes(v)} alt="صورة المركبة"></div>`:'<div class="vehicle-card-image vehicle-card-placeholder"><span>⌁</span></div>'}<div class="vehicle-card-body"><div class="vehicle-card-top"><span class="vehicle-card-icon">⌁</span><div class="vehicle-menu"><button class="icon-btn" data-action="edit-vehicle-card" data-id="${v.id}" aria-label="تعديل">✎</button><button class="icon-btn delete" data-action="delete-vehicle-card" data-id="${v.id}" aria-label="حذف">×</button></div></div><h2>${esc(vehicleTitle(v))}</h2><p class="model">${esc([v.make,v.model,v.trim,v.year].filter(Boolean).join(' '))}</p><div class="vehicle-card-specs"><div><small>العداد</small><strong>${metric(v.odometer,'كم')}</strong></div><div><small>السجلات</small><strong>${metric(records,'سجل')}</strong></div></div><span class="vehicle-open">فتح الملف ←</span></div></article>`}).join('');
+    $('#vehicle-empty').classList.toggle('show',!data.vehicles.length);void hydrateVehiclePhotos($('#vehicle-list'));
   }
   function navigate(section){
     currentNav=section==='trips'?'vehicles':section;const homeSections=['home','vehicles'];
@@ -160,7 +160,96 @@
     $('#stat-km').innerHTML=metric(tripKm,'كم');$('#stat-expenses').innerHTML=totalsHTML(totals);
     renderVehiclePhoto(v);renderService(v,maintenance);renderExpenses(carExpenses(expenses,maintenance),totals);renderTrips(trips);
   }
-  function renderVehiclePhoto(v){const image=v.image||v.imageUrl||'',photo=$('#vehicle-photo'),empty=$('#vehicle-photo-placeholder'),mobileMenu=$('#vehicle-photo-mobile-menu');if(image){photo.src=image;photo.hidden=false;empty.hidden=true}else{photo.removeAttribute('src');photo.hidden=true;empty.hidden=false}$('#add-vehicle-photo').hidden=!!image;$('#change-vehicle-photo').hidden=!image;$('#delete-vehicle-photo').hidden=!image;mobileMenu.hidden=!image;if(!image){$('#vehicle-photo-menu-popover').hidden=true;$('#vehicle-photo-menu-toggle').setAttribute('aria-expanded','false')}}
+  function renderVehiclePhoto(v){const image=vehiclePhotoSource(v),hasPhoto=!!(image||v.imageId),photo=$('#vehicle-photo'),empty=$('#vehicle-photo-placeholder'),mobileMenu=$('#vehicle-photo-mobile-menu');if(v.imageId)photo.dataset.vehicleImage=v.imageId;else delete photo.dataset.vehicleImage;if(image){photo.src=image;photo.hidden=false;empty.hidden=true}else{photo.removeAttribute('src');photo.hidden=true;empty.hidden=false}$('#add-vehicle-photo').hidden=hasPhoto;$('#change-vehicle-photo').hidden=!hasPhoto;$('#delete-vehicle-photo').hidden=!hasPhoto;mobileMenu.hidden=!hasPhoto;if(!hasPhoto){$('#vehicle-photo-menu-popover').hidden=true;$('#vehicle-photo-menu-toggle').setAttribute('aria-expanded','false')}void hydrateVehiclePhotos(photo.parentElement)}
+  const photoQuotaError=error=>error?.name==='QuotaExceededError'||error?.code===22;
+  let vehiclePhotoDB;
+  const vehiclePhotoURLs=new Map(),vehiclePhotoLoads=new Map();
+  function openVehiclePhotoDB(){
+    if(!vehiclePhotoDB)vehiclePhotoDB=new Promise((resolve,reject)=>{
+      const request=indexedDB.open('sayyarati-vehicle-photos',1);
+      request.onupgradeneeded=()=>request.result.createObjectStore('images');
+      request.onerror=()=>{vehiclePhotoDB=null;reject(request.error)};
+      request.onblocked=()=>{vehiclePhotoDB=null;reject(new Error('Photo database is blocked by another tab'))};
+      request.onsuccess=()=>{const db=request.result;db.onversionchange=()=>{db.close();vehiclePhotoDB=null};resolve(db)};
+    });
+    return vehiclePhotoDB;
+  }
+  async function vehiclePhotoBlob(id){
+    const db=await openVehiclePhotoDB();
+    return new Promise((resolve,reject)=>{
+      const transaction=db.transaction('images','readonly'),request=transaction.objectStore('images').get(id);
+      transaction.oncomplete=()=>request.result instanceof Blob?resolve(request.result):reject(new Error('Stored vehicle photo not found'));
+      transaction.onerror=transaction.onabort=()=>reject(transaction.error||request.error||new Error('Could not read stored photo'));
+    });
+  }
+  async function storeVehiclePhoto(source){
+    try{
+      const bytes=Uint8Array.from(atob(source.split(',')[1]),character=>character.charCodeAt(0)),blob=new Blob([bytes],{type:'image/jpeg'}),id=uid('photo'),db=await openVehiclePhotoDB();
+      await new Promise((resolve,reject)=>{
+        const transaction=db.transaction('images','readwrite');transaction.objectStore('images').add(blob,id);
+        transaction.oncomplete=resolve;transaction.onerror=transaction.onabort=()=>reject(transaction.error||new Error('Could not store photo'));
+      });
+      vehiclePhotoURLs.set(id,URL.createObjectURL(blob));return id;
+    }catch(error){logVehiclePhotoError('indexedDB-write',error);throw error}
+  }
+  function vehiclePhotoSource(v){return vehiclePhotoURLs.get(v.imageId)||v.image||v.imageUrl||''}
+  function vehiclePhotoAttributes(v){const source=vehiclePhotoSource(v);return(source?' src="'+esc(source)+'"':'')+(v.imageId?' data-vehicle-image="'+esc(v.imageId)+'"':'')}
+  async function hydrateVehiclePhotos(root=document){
+    return (await Promise.all($$('img[data-vehicle-image]',root).map(async img=>{
+      const id=img.dataset.vehicleImage;
+      try{
+        if(!vehiclePhotoURLs.has(id)){
+          if(!vehiclePhotoLoads.has(id))vehiclePhotoLoads.set(id,vehiclePhotoBlob(id).then(blob=>{vehiclePhotoURLs.set(id,URL.createObjectURL(blob))}).catch(error=>{logVehiclePhotoError('indexedDB-read',error,{imageId:id});throw error}));
+          await vehiclePhotoLoads.get(id);
+        }
+        if(img.isConnected&&img.dataset.vehicleImage===id){img.src=vehiclePhotoURLs.get(id);img.hidden=false;if(img.id==='vehicle-photo')$('#vehicle-photo-placeholder').hidden=true}
+        return true;
+      }catch{if(img.isConnected&&img.dataset.vehicleImage===id)img.alt=language==='en'?'Could not load vehicle photo':'تعذر تحميل صورة المركبة';return false}
+    }))).every(Boolean);
+  }
+  function logVehiclePhotoError(stage,error,details={}){
+    console.error('[vehicle-photo]',{stage,name:error?.name,message:error?.message,...details},error);
+  }
+  async function compressVehiclePhoto(source,targetChars=96*1024){
+    let stage='read',url,canvas;
+    const details={sourceBytes:typeof source==='string'?Math.floor(source.length*3/4):source.size,type:typeof source==='string'?'image/jpeg':source.type,targetChars};
+    try{
+      url=typeof source==='string'?source:URL.createObjectURL(source);
+      stage='decode';
+      const image=new Image();
+      await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=event=>{logVehiclePhotoError('image-load-event',event,details);reject(event.error||new DOMException('The browser could not decode the selected image.','EncodingError'))};image.src=url});
+      details.sourceWidth=image.naturalWidth;details.sourceHeight=image.naturalHeight;
+      stage='canvas-resize';canvas=document.createElement('canvas');const context=canvas.getContext('2d');
+      if(!context)throw new Error('Canvas 2D context unavailable');
+      for(let max=1280;max>=240;max=Math.floor(max*.75)){
+        const scale=Math.min(1,max/Math.max(image.naturalWidth,image.naturalHeight));
+        canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+        details.width=canvas.width;details.height=canvas.height;stage='canvas-resize';
+        context.fillStyle='#fff';context.fillRect(0,0,canvas.width,canvas.height);context.drawImage(image,0,0,canvas.width,canvas.height);
+        for(const quality of [.7,.55,.4]){
+          details.quality=quality;stage='canvas-toBlob';
+          const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error('Canvas returned an empty JPEG blob')),'image/jpeg',quality));
+          if(blob.type!=='image/jpeg')throw new Error('Canvas did not encode JPEG');
+          if(4*Math.ceil(blob.size/3)+23>targetChars)continue;
+          stage='blob-to-base64';
+          const result=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(reader.error||new Error('Could not read compressed blob'));reader.onabort=()=>reject(new DOMException('Photo reading aborted','AbortError'));reader.readAsDataURL(blob)});
+          if(!result.startsWith('data:image/jpeg;base64,')||result.length>targetChars)throw new Error('Invalid or oversized JPEG encoding');
+          console.info('[vehicle-photo]',{stage:'compressed',...details,jpegBytes:blob.size,encodedChars:result.length,estimatedUTF16Bytes:result.length*2});
+          return result;
+        }
+      }
+      stage='compression';throw new Error('Could not compress the photo to the target size');
+    }catch(error){logVehiclePhotoError(stage,error,details);throw error}
+    finally{if(typeof source!=='string'&&url)URL.revokeObjectURL(url);if(canvas){canvas.width=0;canvas.height=0}}
+  }
+  async function persistVehiclePhotoRecord(record,activate=false){
+    const candidate={...record};
+    if(candidate.image){candidate.imageId=await storeVehiclePhoto(candidate.image);candidate.image='';candidate.imageUrl=''}
+    const exists=data.vehicles.some(v=>v.id===candidate.id),next={...data,vehicles:exists?data.vehicles.map(v=>v.id===candidate.id?candidate:v):[...data.vehicles,candidate],...(activate?{activeVehicleId:candidate.id}:{})};
+    const payload=JSON.stringify(next);
+    try{localStorage.setItem(KEY,payload);data=next}
+    catch(error){logVehiclePhotoError('localStorage-reference',error,{payloadChars:payload.length});throw error}
+  }
   async function readVehicleImage(file,done,input){
     if(!file)return;
     const container=input.closest('.vehicle-image-field,.vehicle-photo'),form=input.closest('form'),submit=form?.querySelector('[type=submit]');
@@ -169,31 +258,23 @@
     const message=(ar,en)=>{status.textContent=language==='en'?en:ar};
     const job=input.imageJob=(input.imageJob||0)+1;
     const current=()=>input.isConnected&&input.imageJob===job&&(!form||$('#app-dialog').open);
-    let url;
+    let stage='format';
     try{
       if(!/^image\/(jpeg|png|webp|heic|heif)$/i.test(file.type)&&! /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name))throw Error('format');
       if(submit)submit.disabled=true;
       message('جارٍ تصغير وضغط الصورة…','Resizing and compressing photo…');
-      url=URL.createObjectURL(file);
-      const image=new Image();image.src=url;await image.decode();if(!current())return;
-      const canvas=document.createElement('canvas'),context=canvas.getContext('2d');
-      let max=1600,result='';
-      // Limit the encoded image to 240 KiB (about 180 KiB JPEG), not the source file.
-      while(max>=320){
-        const scale=Math.min(1,max/Math.max(image.naturalWidth,image.naturalHeight));
-        canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
-        context.fillStyle='#fff';context.fillRect(0,0,canvas.width,canvas.height);context.drawImage(image,0,0,canvas.width,canvas.height);
-        for(const quality of [.82,.68,.54]){result=canvas.toDataURL('image/jpeg',quality);if(result.length<=240*1024)break}
-        if(result.startsWith('data:image/jpeg;')&&result.length<=240*1024)break;
-        max=Math.floor(max*.75);
-      }
-      if(!result.startsWith('data:image/jpeg;')||result.length>240*1024)throw Error('compression');
-      if(current()){done(result);message(form?'تم تجهيز الصورة. اضغط حفظ البيانات للاحتفاظ بها.':'تم حفظ صورة المركبة.',form?'Photo prepared. Save the form to keep it.':'Vehicle photo saved.')}
+      stage='prepare';const result=await compressVehiclePhoto(file);
+      if(current()){stage='save';await done(result);message(form?'تم تجهيز الصورة. اضغط حفظ البيانات للاحتفاظ بها.':'تم حفظ صورة المركبة.',form?'Photo prepared. Save the form to keep it.':'Vehicle photo saved.')}
     }catch(error){
-      if(current())message(error.message==='format'?'اختر صورة JPG أو PNG أو WebP أو HEIC.':/\.(heic|heif)$/i.test(file.name)||/hei[cf]/i.test(file.type)?'تعذر فتح HEIC في هذا المتصفح. صدّر الصورة بصيغة JPEG أو جرّب متصفحاً يدعمها.':'تعذر تجهيز أو حفظ الصورة. جرّب صورة أخرى أو تأكد من مساحة تخزين المتصفح.',error.message==='format'?'Choose a JPG, PNG, WebP or HEIC photo.':/\.(heic|heif)$/i.test(file.name)||/hei[cf]/i.test(file.type)?'This browser could not decode HEIC. Export it as JPEG or use a browser that supports it.':'Could not prepare or save the photo. Try another photo or check browser storage space.');
-    }finally{if(url)URL.revokeObjectURL(url);if(input.imageJob===job){input.value='';if(submit&&input.isConnected)submit.disabled=false}}
+      if(stage==='format')logVehiclePhotoError(stage,error,{type:file.type,sourceBytes:file.size});
+      if(current()){
+        if(photoQuotaError(error))message('مساحة تخزين المتصفح غير كافية. لم تُغيّر الصورة السابقة أو بيانات المركبة.','Browser storage is full. The existing photo and vehicle data were not changed.');
+        else if(error.name==='EncodingError')message('تعذر فكّ الصورة في هذا المتصفح. إذا كانت HEIC، صدّر نسخة JPEG ثم أعد المحاولة.','The browser could not decode this image. For HEIC, export a JPEG copy and retry.');
+        else message('فشل تجهيز الصورة أو حفظها ('+error.name+'). تفاصيل المرحلة موجودة في Console.','Photo processing or saving failed ('+error.name+'). The failing stage is logged in Console.');
+      }
+    }finally{if(input.imageJob===job){input.value='';if(submit&&input.isConnected)submit.disabled=false}}
   }
-  function updateFormImagePreview(image){const preview=$('#form-vehicle-image-preview'),placeholder=$('#form-vehicle-image-placeholder'),change=$('#form-change-image'),remove=$('#form-delete-image');if(!preview)return;if(image){preview.src=image;preview.hidden=false;placeholder.hidden=true;change.textContent='تغيير الصورة';remove.hidden=false}else{preview.removeAttribute('src');preview.hidden=true;placeholder.hidden=false;change.textContent='إضافة صورة المركبة';remove.hidden=true}applyLanguage($('#vehicle-image-field'))}
+  function updateFormImagePreview(image,imageId){const preview=$('#form-vehicle-image-preview'),placeholder=$('#form-vehicle-image-placeholder'),change=$('#form-change-image'),remove=$('#form-delete-image');if(!preview)return;if(imageId)preview.dataset.vehicleImage=imageId;else delete preview.dataset.vehicleImage;if(image||imageId){if(image)preview.src=image;else preview.removeAttribute('src');preview.hidden=!image;placeholder.hidden=true;change.textContent='تغيير الصورة';remove.hidden=false}else{preview.removeAttribute('src');preview.hidden=true;placeholder.hidden=false;change.textContent='إضافة صورة المركبة';remove.hidden=true}applyLanguage($('#vehicle-image-field'));void hydrateVehiclePhotos(preview.parentElement)}
   function renderService(v,records){
     const last=[...records].sort((a,b)=>num(b.odometer)-num(a.odometer)||String(b.date).localeCompare(String(a.date)))[0],base=last?num(last.odometer):Math.floor(num(v.odometer)/v.serviceInterval)*v.serviceInterval,target=base+v.serviceInterval,remaining=target-v.odometer,progress=Math.min(100,Math.max(0,(v.odometer-base)/v.serviceInterval*100)),box=$('#service-alert');box.classList.remove('warning','due');$('#service-progress').style.width=progress+'%';$('#service-target').innerHTML='الموعد عند '+metric(target,'كم')+' · كل '+metric(v.serviceInterval,'كم');
     if(remaining<=0){box.classList.add('due');$('#service-remaining').textContent='حان موعد الصيانة';$('#service-message').innerHTML='تم تجاوز الموعد بمقدار '+metric(Math.abs(remaining),'كم')}else{if(remaining<=Math.min(1000,v.serviceInterval*.1))box.classList.add('warning');$('#service-remaining').innerHTML=metric(remaining,'كم')+' متبقية';$('#service-message').textContent=remaining<=1000?'اقترب موعد الصيانة، جهّز موعدك الآن':'كل شيء على ما يرام'}
@@ -232,13 +313,13 @@
     const included=key=>$('[data-report-section="'+key+'"]').checked,maintenance=reportRecords('maintenance').sort((a,b)=>String(b.date).localeCompare(String(a.date))),expenses=carExpenses(reportRecords('expenses'),reportRecords('maintenance')).sort((a,b)=>String(b.date).localeCompare(String(a.date))),trips=reportRecords('trips').sort((a,b)=>String(b.date).localeCompare(String(a.date)));
     const totals={},expenseTotals={},tripReportTotals={};const add=(target,amount,currency)=>{const c=currencyCode(currency);target[c]=(target[c]||0)+num(amount)};expenses.forEach(r=>{add(totals,r.amount,r.currency);add(expenseTotals,r.amount,r.currency)});trips.forEach(r=>Object.entries(tripTotals(r)).forEach(([currency,value])=>{add(tripReportTotals,value,currency)}));
     const totalsMarkup=source=>Object.entries(source).filter(([,x])=>x>0).map(([c,x])=>'<span class="report-total">إجمالي '+c+': <b>'+moneyMetric(x,c)+'</b></span>').join('')||'<span class="report-total">لا توجد تكاليف</span>';
-    const tripKm=trips.reduce((sum,r)=>sum+(tripDistance(r)??0),0),generated=new Intl.DateTimeFormat(locale(),{dateStyle:'long',timeStyle:'short'}).format(new Date()),image=v.image||v.imageUrl||'';
+    const tripKm=trips.reduce((sum,r)=>sum+(tripDistance(r)??0),0),generated=new Intl.DateTimeFormat(locale(),{dateStyle:'long',timeStyle:'short'}).format(new Date()),image=vehiclePhotoSource(v);
     let html='<header class="report-head"><div><span class="report-brand">سيارتي - سجل المركبة</span><h1>'+esc(vehicleTitle(v))+'</h1><p>'+esc([v.make,v.model,v.trim,v.year].filter(Boolean).join(' · '))+'</p></div><p>تاريخ إنشاء التقرير<br><strong>'+generated+'</strong></p></header>';
-    if(included('vehicle'))html+='<section class="report-section"><h2>معلومات المركبة</h2><div class="report-vehicle">'+(image?'<img src="'+esc(image)+'" alt="صورة المركبة">':'')+'<div class="report-info"><div><small>الاسم</small><strong>'+esc(v.name||'—')+'</strong></div><div><small>الشركة المصنعة</small><strong>'+esc(v.make||'—')+'</strong></div><div><small>الموديل</small><strong>'+esc(v.model||'—')+'</strong></div><div><small>الفئة / الطراز</small><strong>'+esc(v.trim||'—')+'</strong></div><div><small>سنة الصنع</small><strong>'+metric(v.year)+'</strong></div><div><small>اللون</small><strong>'+esc(fixedLabel(v.color)||'—')+'</strong></div><div><small>نوع الوقود</small><strong>'+esc(fixedLabel(v.fuel)||'—')+'</strong></div><div><small>رقم اللوحة</small><strong>'+esc(v.plate||'—')+'</strong></div><div><small>العداد الحالي</small><strong>'+metric(v.odometer,'كم')+'</strong></div><div><small>آخر تحديث للعداد</small><strong>'+dateTime(v.odometerUpdatedAt)+'</strong></div></div></div></section>';
+    if(included('vehicle'))html+='<section class="report-section"><h2>معلومات المركبة</h2><div class="report-vehicle">'+(image||v.imageId?'<img'+vehiclePhotoAttributes(v)+' alt="صورة المركبة">':'')+'<div class="report-info"><div><small>الاسم</small><strong>'+esc(v.name||'—')+'</strong></div><div><small>الشركة المصنعة</small><strong>'+esc(v.make||'—')+'</strong></div><div><small>الموديل</small><strong>'+esc(v.model||'—')+'</strong></div><div><small>الفئة / الطراز</small><strong>'+esc(v.trim||'—')+'</strong></div><div><small>سنة الصنع</small><strong>'+metric(v.year)+'</strong></div><div><small>اللون</small><strong>'+esc(fixedLabel(v.color)||'—')+'</strong></div><div><small>نوع الوقود</small><strong>'+esc(fixedLabel(v.fuel)||'—')+'</strong></div><div><small>رقم اللوحة</small><strong>'+esc(v.plate||'—')+'</strong></div><div><small>العداد الحالي</small><strong>'+metric(v.odometer,'كم')+'</strong></div><div><small>آخر تحديث للعداد</small><strong>'+dateTime(v.odometerUpdatedAt)+'</strong></div></div></div></section>';
     if(included('expenses'))html+='<section class="report-section"><h2>سجل المصاريف</h2>'+expenseMonths(expenses).map(group=>'<h3>'+esc(monthLabel(group.key))+'</h3>'+reportTable(['التاريخ','التصنيف','الملاحظات','المبلغ'],group.records.map(r=>'<tr><td>'+date(r.date)+'</td><td>'+esc(fixedLabel(r.category))+'</td><td class="report-notes">'+esc(r.notes||'—')+'</td><td>'+moneyMetric(r.amount,r.currency)+'</td></tr>'))+'<p>إجمالي مصروفات الشهر</p><div class="report-totals">'+totalsMarkup(group.totals)+'</div>').join('')+'<div class="report-totals">'+totalsMarkup(expenseTotals)+'</div></section>';
     if(included('trips')){const finalValue=convertedTotals(tripReportTotals,reportFinalCurrency);html+='<section class="report-section"><h2>سجل الرحلات</h2>'+reportTable(['التاريخ','من','إلى','النوع','عداد البداية','مصروفات الرحلة','إجمالي المسافة','الإجمالي حسب العملة'],trips.map(r=>'<tr><td>'+date(r.date)+'</td><td>'+esc(r.start)+'</td><td>'+esc(r.destination)+'</td><td>'+esc(fixedLabel(r.type))+'</td><td>'+metric(r.startOdometer)+'</td><td class="report-notes">'+(tripExpenses(r).map(item=>esc(tripExpenseLabel(item.type)+(item.type==='maintenance'&&item.maintenanceType?' · '+item.maintenanceType:''))+' — '+moneyMetric(item.cost,tripExpenseCurrency(item,r))).join('<br>')||'—')+'</td><td>'+(tripDistance(r)===null?'—':metric(tripDistance(r),'كم'))+'</td><td>'+tripTotalsHTML(tripTotals(r),'—')+'</td></tr>'))+'</section><section class="report-section report-final-total"><h2>إجمالي مصروفات الرحلات</h2><div class="report-totals">'+totalsMarkup(tripReportTotals)+'</div><label><span>عملة الإجمالي النهائي</span><select id="report-final-currency">'+currencyOptions(reportFinalCurrency)+'</select></label><strong id="report-final-value">'+(finalValue===null?'—':moneyMetric(finalValue,reportFinalCurrency))+'</strong><small>'+(exchangeError?'تعذر تحميل أسعار الصرف':!exchangeRates?'جارٍ تحميل سعر الصرف…':'تم التحويل باستخدام سعر الصرف الحالي')+'</small></section>'}
     if(included('stats')){const last=[...recordsFor('maintenance')].sort((a,b)=>num(b.odometer)-num(a.odometer))[0],base=last?num(last.odometer):Math.floor(num(v.odometer)/v.serviceInterval)*v.serviceInterval,target=base+v.serviceInterval,remaining=target-v.odometer;html+='<section class="report-section"><h2>الإحصائيات والصيانة القادمة</h2><div class="report-stats"><div class="report-stat"><small>كيلومترات الرحلات</small><strong>'+metric(tripKm,'كم')+'</strong></div><div class="report-stat"><small>عمليات الصيانة</small><strong>'+metric(maintenance.length)+'</strong></div><div class="report-stat"><small>المصاريف</small><strong>'+metric(expenses.length,'سجل')+'</strong></div><div class="report-stat"><small>الرحلات</small><strong>'+metric(trips.length,'رحلة')+'</strong></div></div><h3>إجمالي مصروفات السيارة</h3><div class="report-totals">'+totalsMarkup(totals)+'</div><div class="report-service"><strong>الصيانة القادمة: </strong>'+(remaining<=0?'حان موعدها — متجاوزة بمقدار '+metric(Math.abs(remaining),'كم'):'متبقي '+metric(remaining,'كم'))+' · الموعد عند '+metric(target,'كم')+'</div></section>'}
-    html+='<footer class="report-footer">سيارتي · تقرير خاص بالمركبة المختارة · القيم الأصلية محفوظة، والتحويل للإجمالي النهائي فقط</footer>';$('#report-content').innerHTML=html;applyLanguage($('#report-content'))
+    html+='<footer class="report-footer">سيارتي · تقرير خاص بالمركبة المختارة · القيم الأصلية محفوظة، والتحويل للإجمالي النهائي فقط</footer>';$('#report-content').innerHTML=html;applyLanguage($('#report-content'));void hydrateVehiclePhotos($('#report-content'))
   }
 
   const field=(label,name,type='text',value='',o={})=>`<label class="field${o.full?' full':''}"><span>${label}${o.required===false?'':' <em>*</em>'}</span><input name="${name}" type="${type}" value="${esc(value)}"${o.required===false?'':' required'}${o.min!==undefined?` min="${o.min}"`:''}${o.step?` step="${o.step}"`:''}${o.placeholder?` placeholder="${esc(o.placeholder)}"`:''}></label>`;
@@ -254,7 +335,7 @@
     if(type==='vehicle'){
       const x=vehicleOverride||{name:'',make:'',model:'',trim:'',year:'',color:'white',fuel:'diesel',plate:'',odometer:0,notes:''};
       pendingVehicleImage=undefined;
-      initialVehicleImage=x.image||x.imageUrl||'';
+      initialVehicleImage=vehiclePhotoSource(x);
       const knownMake=VEHICLE_MAKES.includes(x.make),makeChoice=x.make?(knownMake?x.make:'شركة أخرى'):'',models=CATALOG.makes[x.make]||[],knownModel=models.includes(x.model),modelChoice=x.model?(knownModel?x.model:'موديل آخر'):'',trims=CATALOG.trims[x.make+'|'+x.model]||[],knownTrim=!x.trim||trims.includes(x.trim),trimChoice=!x.trim?'بدون فئة':knownTrim?x.trim:'فئة أخرى',knownColor=VEHICLE_COLORS.includes(x.color),selectedColor=knownColor?x.color:'custom_color';
       title=editingId?'تعديل بيانات المركبة':'إضافة مركبة';kicker='مرآب سيارتي';
       html=field('اسم المركبة (اختياري)','name','text',x.name,{required:false,placeholder:'مثال: شقران أو الجيب'})
@@ -273,9 +354,9 @@
     if(type==='maintenance'){const r=data.maintenance.find(x=>x.id===editingId)||{date:today(),odometer:v.odometer,types:[],cost:'',currency:'KWD',workshop:'',notes:''};title=editingId?'تعديل سجل الصيانة':'إضافة سجل صيانة';html=field('التاريخ','date','date',r.date)+field('قراءة العداد (كم)','odometer','number',r.odometer,{min:0})+'<div class="field full"><span>نوع الصيانة <em>*</em></span><div class="checks">'+SERVICE_TYPES.map(t=>`<label class="check"><input type="checkbox" name="types" value="${t}"${r.types?.includes(t)?' checked':''}> ${fixedLabel(t)}</label>`).join('')+'</div></div>'+field('التكلفة','cost','number',r.cost,{min:0,step:'.001'})+currencySelect(r.currency)+field('الورشة أو الوكالة','workshop','text',r.workshop,{placeholder:'اسم مقدم الخدمة',full:true})+area('ملاحظات الصيانة','notes',r.notes)}
     if(type==='expense'){const r=data.expenses.find(x=>x.id===editingId)||{date:today(),category:'fuel',amount:'',currency:'KWD',notes:''};title=editingId?'تعديل المصروف':'إضافة مصروف';html=field('التاريخ','date','date',r.date)+select('التصنيف','category',CATEGORIES.map(value=>({value,text:fixedLabel(value)})),r.category)+field('المبلغ','amount','number',r.amount,{min:0,step:'.001'})+currencySelect(r.currency)+field('اسم المحل / الجهة','merchant','text',r.merchant||'',{required:false})+area('الملاحظات','notes',r.notes)}
     if(type==='trip'){const r=data.trips.find(x=>x.id===editingId)||{vehicleId:v?.id||data.vehicles[0]?.id,date:today(),start:'',destination:'',startOdometer:v?.odometer||0,type:'local',expenses:[],totalCost:0,distanceKm:null,currency:'KWD',notes:''},selectedVehicleId=data.vehicles.some(vehicle=>vehicle.id===r.vehicleId)?r.vehicleId:(v?.id||data.vehicles[0]?.id);title=editingId?'تعديل الرحلة':'إضافة رحلة';html=select('المركبة','vehicleId',data.vehicles.map(vehicle=>({value:vehicle.id,text:vehicleTitle(vehicle)})),selectedVehicleId,true)+field('نقطة الانطلاق','start','text',r.start)+field('الوجهة','destination','text',r.destination)+field('تاريخ الرحلة','date','date',r.date)+select('نوع الرحلة','type',['local','travel','offroad'].map(value=>({value,text:fixedLabel(value)})),r.type)+field('عداد البداية','startOdometer','number',r.startOdometer,{min:0})+`<section class="trip-expenses-field field full"><div class="trip-expenses-head"><span>مصروفات الرحلة</span><button type="button" class="soft-btn" data-action="add-trip-expense">＋ إضافة مصروف</button></div><div id="trip-expense-rows">${tripExpenses(r).map(item=>tripExpenseRow(item,r.currency)).join('')}</div></section><div class="field full trip-total-field"><span>إجمالي تكلفة الرحلة حسب العملة الأصلية</span><div class="trip-total-breakdown" data-trip-form-totals>لا توجد مصروفات</div></div>`+area('ملاحظات الرحلة','notes',r.notes)+field('إجمالي المسافة المقطوعة للرحلة (km)','distanceKm','number',tripDistance(r)??'',{min:0,required:false,full:true})}
-    if(type==='vehicle'&&!editingId)html+='<p class="field full" id="vehicle-add-error" role="alert" hidden></p>';
+    if(type==='vehicle')html+='<p class="field full" id="vehicle-add-error" role="alert" hidden></p>';
     $('#dialog-kicker').textContent=kicker;$('#dialog-title').textContent=title;$('#form-fields').innerHTML=html;$('#app-dialog').showModal();
-    if(type==='vehicle'){setupVehicleDependencies();updateFormImagePreview(initialVehicleImage)}
+    if(type==='vehicle'){setupVehicleDependencies();updateFormImagePreview(initialVehicleImage,vehicleOverride?.imageId)}
     if((type==='odometer'||type==='vehicle')&&window.OdometerOCR)disposeOdometerCamera=window.OdometerOCR.mount($('[name=odometer]',$('#app-form')),$('#app-dialog'));
     if(type==='expense'){const input=$('[name=date]',$('#app-form')),hint=document.createElement('p');hint.className='form-hint';input.after(hint);const update=()=>{hint.textContent='شهر المصروف: '+monthLabel(input.value.slice(0,7))};input.addEventListener('input',update);update();if(window.ReceiptOCR)disposeReceipt=window.ReceiptOCR.mount($('#app-form'),$('#app-dialog'));}
     if(type==='trip')setupTripForm();applyLanguage($('#app-dialog'));setTimeout(()=>$('input,select,textarea',$('#app-form'))?.focus(),0)
@@ -320,21 +401,21 @@
     const error=$('#vehicle-add-error');if(!error)return;
     error.textContent=message;error.hidden=false;
   }
-  function saveNewVehicle(record){
-    const next={...data,vehicles:[...data.vehicles,record],activeVehicleId:record.id};
-    try{localStorage.setItem(KEY,JSON.stringify(next))}
+  async function saveNewVehicle(record){
+    const button=$('#app-form [type=submit]');button.disabled=true;
+    try{await persistVehiclePhotoRecord(record,true)}
     catch(error){
       vehicleAddError(language==='en'
         ?(error.name==='QuotaExceededError'?'Not enough browser storage to save this vehicle. Your entries are still here; try a smaller vehicle photo if you added one.':'The browser could not save this vehicle. Your entries are still here; allow site storage and try again.')
         :(error.name==='QuotaExceededError'?'مساحة تخزين المتصفح لا تكفي لحفظ المركبة. بيانات النموذج محفوظة هنا؛ جرّب صورة أصغر إذا أضفت صورة للمركبة.':'تعذر حفظ المركبة في تخزين المتصفح. بيانات النموذج محفوظة هنا؛ اسمح للموقع بالتخزين ثم حاول مجدداً.'));
       return;
-    }
-    data=next;pendingVehicleImage=undefined;$('#app-dialog').close();render();toast('تم حفظ البيانات');
+    }finally{button.disabled=false}
+    pendingVehicleImage=undefined;$('#app-dialog').close();render();toast('تم حفظ البيانات');
   }
   function upsert(name,r){const i=data[name].findIndex(x=>x.id===r.id);if(i<0)data[name].push(r);else data[name][i]=r}
   function submit(e){
     e.preventDefault();const fd=new FormData(e.currentTarget),x=Object.fromEntries(fd),v=activeVehicle();
-    if(activeForm==='vehicle'){const existing=data.vehicles.find(z=>z.id===editingId),finalMake=x.make==='شركة أخرى'?x.customMake.trim():x.make,finalModel=x.model==='موديل آخر'?x.customModel.trim():x.model,finalTrim=x.trim==='فئة أخرى'?x.customTrim.trim():(x.trim==='بدون فئة'?'':x.trim),finalColor=x.color==='custom_color'?x.customColor.trim():x.color;if(!finalMake)return toast('اكتب اسم الشركة');if(!finalModel)return toast('اكتب اسم الموديل');if(x.trim==='فئة أخرى'&&!finalTrim)return toast('اكتب اسم الفئة');if(!finalColor)return toast('اكتب اسم اللون');const changedImage=pendingVehicleImage!==undefined,record={id:editingId||uid('v'),name:x.name.trim(),make:finalMake,model:finalModel,trim:finalTrim,year:num(x.year),color:finalColor,fuel:x.fuel,plate:x.plate.trim(),image:changedImage?pendingVehicleImage:(existing?.image||''),imageUrl:changedImage?'':(existing?.imageUrl||''),odometer:num(x.odometer),odometerUpdatedAt:existing?.odometer===num(x.odometer)?existing.odometerUpdatedAt:stamp(),serviceInterval:existing?.serviceInterval||10000,notes:x.notes.trim(),createdAt:existing?.createdAt||stamp()};if(!editingId){saveNewVehicle(record);return}upsert('vehicles',record);data.activeVehicleId=record.id;pendingVehicleImage=undefined}
+    if(activeForm==='vehicle'){const existing=data.vehicles.find(z=>z.id===editingId),finalMake=x.make==='شركة أخرى'?x.customMake.trim():x.make,finalModel=x.model==='موديل آخر'?x.customModel.trim():x.model,finalTrim=x.trim==='فئة أخرى'?x.customTrim.trim():(x.trim==='بدون فئة'?'':x.trim),finalColor=x.color==='custom_color'?x.customColor.trim():x.color;if(!finalMake)return toast('اكتب اسم الشركة');if(!finalModel)return toast('اكتب اسم الموديل');if(x.trim==='فئة أخرى'&&!finalTrim)return toast('اكتب اسم الفئة');if(!finalColor)return toast('اكتب اسم اللون');const changedImage=pendingVehicleImage!==undefined,record={id:editingId||uid('v'),name:x.name.trim(),make:finalMake,model:finalModel,trim:finalTrim,year:num(x.year),color:finalColor,fuel:x.fuel,plate:x.plate.trim(),image:changedImage?pendingVehicleImage:(existing?.image||''),imageUrl:changedImage?'':(existing?.imageUrl||''),...(!changedImage&&existing?.imageId?{imageId:existing.imageId}:{}),odometer:num(x.odometer),odometerUpdatedAt:existing?.odometer===num(x.odometer)?existing.odometerUpdatedAt:stamp(),serviceInterval:existing?.serviceInterval||10000,notes:x.notes.trim(),createdAt:existing?.createdAt||stamp()};if(!editingId||changedImage){saveNewVehicle(record);return}upsert('vehicles',record);data.activeVehicleId=record.id;pendingVehicleImage=undefined}
     if(activeForm==='odometer'){v.odometer=num(x.odometer);v.odometerUpdatedAt=stamp()}
     if(activeForm==='settings')v.serviceInterval=Math.max(1000,num(x.serviceInterval));
     if(activeForm==='maintenance'){const types=fd.getAll('types');if(!types.length)return toast('اختر نوع صيانة واحداً على الأقل');upsert('maintenance',{id:editingId||uid('m'),vehicleId:v.id,date:x.date,odometer:num(x.odometer),types,cost:num(x.cost),currency:currencyCode(x.currency),workshop:x.workshop.trim(),notes:x.notes.trim()})}
@@ -344,7 +425,17 @@
   }
   function askDelete(kind,recordId,label){pendingDelete={kind,id:String(recordId)};$('#confirm-message').textContent=kind==='vehicle'?'سيتم حذف مركبة «'+label+'» وجميع سجلاتها المرتبطة نهائياً. لا يمكن التراجع عن ذلك.':'سيتم حذف '+label+' نهائياً من سجل هذه المركبة.';applyLanguage($('#confirm-dialog'));$('#confirm-dialog').showModal()}
   function performDelete(){if(!pendingDelete)return;const {kind,id}=pendingDelete;if(kind==='vehicle'){data.vehicles=data.vehicles.filter(v=>v.id!==id);['maintenance','expenses','trips'].forEach(k=>data[k]=data[k].filter(r=>r.vehicleId!==id));if(data.activeVehicleId===id)data.activeVehicleId=null}else data[kind]=data[kind].filter(r=>r.id!==id);pendingDelete=null;$('#confirm-dialog').close();save('تم الحذف بنجاح')}
-  function exportData(){const payload={...data,app:'سياراتي',exportedAt:stamp()};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='sayyarati-backup-'+today()+'.json';document.body.append(a);a.click();a.remove();URL.revokeObjectURL(url);toast('تم تصدير جميع بيانات سيارتي')}
+  async function exportData(){
+    try{
+      // Keep backups portable: embed stored photos in the exported file only.
+      const snapshot=data,vehicles=await Promise.all(snapshot.vehicles.map(async vehicle=>{
+        if(!vehicle.imageId)return vehicle;
+        const blob=await vehiclePhotoBlob(vehicle.imageId),image=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob)});
+        const copy={...vehicle,image,imageUrl:''};delete copy.imageId;return copy;
+      }));
+      const payload={...snapshot,vehicles,app:'سياراتي',exportedAt:stamp()},blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='sayyarati-backup-'+today()+'.json';document.body.append(a);a.click();a.remove();URL.revokeObjectURL(url);toast('تم تصدير جميع بيانات سيارتي');
+    }catch(error){logVehiclePhotoError('photo-export',error);toast('تعذر تضمين صورة المركبة في النسخة الاحتياطية. حاول مجدداً')}
+  }
   function importData(file){if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const parsed=JSON.parse(reader.result);if(parsed.version===3&&Array.isArray(parsed.vehicles))data=normalize(parsed);else if(parsed.vehicle||parsed.odometer)data=migrate(parsed,!!parsed.odometer&&!parsed.vehicle);else throw Error();save('تمت استعادة جميع المركبات والسجلات')}catch{toast('الملف غير صالح أو ليس نسخة سيارتي')}finally{$('#import-file').value=''}};reader.readAsText(file)}
   function toast(message){const el=$('#toast');el.textContent=message;applyLanguage(el);el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),2400)}
 
@@ -355,7 +446,7 @@
       if(a==='open-vehicle'){currentNav='vehicles';data.activeVehicleId=String(rid);save()}
       if(a==='add-vehicle')openForm('vehicle');
       if(a==='choose-vehicle-image')$('#vehicle-photo-input').click();
-      if(a==='delete-vehicle-image'){const v=activeVehicle();if(v){v.image='';v.imageUrl='';save('تم حذف الصورة')}}
+      if(a==='delete-vehicle-image'){const v=activeVehicle();if(v){v.image='';v.imageUrl='';delete v.imageId;save('تم حذف الصورة')}}
       if(a==='choose-form-vehicle-image')$('#form-vehicle-image-input').click();
       if(a==='delete-form-vehicle-image'){pendingVehicleImage='';updateFormImagePreview('')}
       if(a==='vehicle-report')openReport();
@@ -380,12 +471,12 @@
   $('#app-form').addEventListener('submit',submit);$('.close-btn').onclick=()=>$('#app-dialog').close();$('#app-dialog').onclick=e=>{if(e.target===$('#app-dialog'))$('#app-dialog').close()};
   $('#cancel-delete').onclick=()=>{pendingDelete=null;$('#confirm-dialog').close()};$('#confirm-delete').onclick=performDelete;
   $('#export-btn').onclick=exportData;$('#import-btn').onclick=()=>$('#import-file').click();$('#import-file').onchange=e=>importData(e.target.files[0]);
-  $('#vehicle-photo-input').onchange=e=>{const input=e.currentTarget,v=activeVehicle();if(!v)return;readVehicleImage(input.files[0],image=>{const next={...data,vehicles:data.vehicles.map(item=>item.id===v.id?{...item,image,imageUrl:''}:item)};localStorage.setItem(KEY,JSON.stringify(next));data=next;render();toast('تم حفظ صورة المركبة')},input)};
+  $('#vehicle-photo-input').onchange=e=>{const input=e.currentTarget,v=activeVehicle();if(!v)return;readVehicleImage(input.files[0],async image=>{await persistVehiclePhotoRecord({...v,image,imageUrl:''});render();toast('تم حفظ صورة المركبة')},input)};
   document.addEventListener('change',e=>{if(e.target.id==='form-vehicle-image-input'){const input=e.target;readVehicleImage(input.files[0],image=>{pendingVehicleImage=image;updateFormImagePreview(image)},input)}if(e.target.matches('[data-trip-final-currency]')){tripFinalCurrencies[e.target.dataset.id]=currencyCode(e.target.value);renderTripFinalTotals()}if(e.target.id==='report-final-currency'){reportFinalCurrency=currencyCode(e.target.value);renderReport()}});
   $('#report-period').onchange=e=>{$$('.report-date').forEach(x=>x.hidden=e.target.value!=='custom');renderReport()};
   $$('[data-report-section]').forEach(x=>x.onchange=renderReport);
   $('#report-from').onchange=renderReport;$('#report-to').onchange=renderReport;
-  $('#print-report').onclick=()=>window.print();
+  $('#print-report').onclick=async()=>{const button=$('#print-report');button.disabled=true;try{if(!await hydrateVehiclePhotos($('#report-content')))throw new Error('Report photo could not be loaded');await Promise.all($$('img',$('#report-content')).map(img=>img.decode()));window.print()}catch(error){logVehiclePhotoError('photo-print',error);toast('تعذر تحميل صورة التقرير. حاول مجدداً')}finally{button.disabled=false}};
   $('#report-dialog').onclick=e=>{if(e.target===$('#report-dialog'))$('#report-dialog').close()};
   const photoMenu=$('#vehicle-photo-mobile-menu'),photoMenuToggle=$('#vehicle-photo-menu-toggle'),photoMenuPopover=$('#vehicle-photo-menu-popover');
   const closePhotoMenu=()=>{photoMenuPopover.hidden=true;photoMenuToggle.setAttribute('aria-expanded','false')};
