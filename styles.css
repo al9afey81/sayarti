@@ -191,5 +191,30 @@ body:not(.auth-ready)>.shell{visibility:hidden;pointer-events:none}.auth-gate{po
 #vehicle-list .vehicle-open{position:static;flex-shrink:0;min-height:44px;padding:9px 12px;border:1px solid #e4c894;border-radius:12px;background:#fff8eb;color:#79551f;cursor:pointer;font-size:.75rem}
 #vehicle-list .vehicle-open:hover,#vehicle-list .vehicle-open:focus-visible{background:#f5e9d0}
 .currency-tools.without-vehicle .currency-tools-grid{grid-template-columns:minmax(0,1fr)}
+
+/* Upcoming maintenance: presentation only, scoped to the vehicle section. */
+#service-alert{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px 32px;padding:26px;border-color:#cbdfe5;background:#f8fcfd}
+#service-alert .service-heading{grid-column:1/-1;display:flex;align-items:center;gap:12px}
+#service-alert .service-heading h2{margin:0;color:#21485a;font-size:1.08rem}
+#service-alert .service-heading>.text-btn{margin-inline-start:auto;min-height:44px;padding:8px 12px;border:1px solid #cbdfe5;border-radius:11px;background:#fff;color:#286780;font-weight:700}
+#service-alert .alert-icon{color:#34748a;background:#e2f0f4}
+#service-alert .alert-copy{text-align:center;align-self:center;min-width:0}
+#service-alert #service-remaining{margin:0 0 10px;color:#204d61;line-height:1.5;font-size:1.05rem}
+#service-alert #service-remaining .metric-number{font-size:44px!important;display:inline-block;direction:ltr;unicode-bidi:isolate}
+#service-alert #service-message{color:#486575;line-height:1.8;font-size:.8rem}
+#service-alert .service-facts{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-self:center}
+#service-alert .service-facts>div{min-width:0;padding:18px 10px;border:1px solid #d5e5e9;border-radius:14px;background:#fff;text-align:center}
+#service-alert .service-facts small{display:block;margin-bottom:10px;color:#486575;font-size:.8rem;font-weight:600}
+#service-alert .service-facts strong{display:flex;align-items:baseline;justify-content:center;flex-wrap:wrap;gap:5px;color:#244c60}
+#service-alert .service-facts .metric-number{font-size:27px!important;direction:ltr;unicode-bidi:isolate}
+#service-alert .alert-progress{grid-column:1/-1;grid-row:auto}
+#service-alert .service-progress-track{position:relative;height:26px;overflow:hidden;border:1px solid #c4d7df;border-radius:13px;background:#e1edf1}
+#service-alert #service-progress{height:100%;background:linear-gradient(90deg,#d4b16d,#91bfc8);transition:width .3s}
+#service-alert #service-progress-label{position:absolute;inset:0;display:grid;place-items:center;margin:0;color:#193d4d;background:none;font:700 13px/1 Tahoma,Arial,sans-serif;direction:ltr}
+#service-alert.warning{background:#fffaf0;border-color:#ddbd7c}
+#service-alert.due{background:#fff6f4;border-color:#d89c93}
+#service-alert.due #service-remaining{color:#943b30}
+#service-alert.due #service-progress{background:#eab1a5}
+@media(max-width:680px){#service-alert{grid-template-columns:minmax(0,1fr);gap:20px;padding:18px 14px}#service-alert .service-heading{gap:8px}#service-alert .service-heading h2{font-size:1rem}#service-alert .service-heading>.text-btn{font-size:.72rem;padding:7px 9px}#service-alert .alert-icon{width:34px;height:34px;flex-shrink:0}#service-alert #service-remaining .metric-number{font-size:38px!important}#service-alert .service-facts{gap:9px}#service-alert .service-facts>div{padding:16px 7px}#service-alert .service-facts .metric-number{font-size:23px!important}}
 @media(max-width:1050px){#vehicle-list{grid-auto-columns:minmax(260px,calc((100% - 15px)/2))}}
 @media(max-width:680px){#home-vehicles{margin-top:22px}#home-vehicles .home-section-head h2{font-size:1.3rem}#vehicle-list{grid-auto-columns:86%;gap:12px;scroll-snap-type:x mandatory}#vehicle-list .vehicle-card-image{height:180px}#vehicle-list .vehicle-card-body{padding:16px}#vehicle-list .vehicle-card h2{font-size:1.1rem}.vehicle-card-footer{gap:8px}#home-vehicles .fleet-summary>div{padding:8px 11px}}
