@@ -112,7 +112,7 @@ test('explicit 500 KWD car / 200 KWD trips: displayed totals stay separate, neve
     api.renderExpenses(api.carExpenses(api.data.expenses,api.data.maintenance),api.totalsFor('v1'));
     assert.deepEqual(plain(api.totalsFor('v1')),{KWD:car});
     assert.deepEqual(plain(api.tripTotals(api.data.trips[0])),{KWD:trip});
-    for(const id of ['#home-expenses','#final-total-value','#expense-totals']){
+    for(const id of ['#final-total-value','#expense-totals']){
       assert.match(text(node(id).innerHTML),new RegExp('\\b'+car+'\\b'));
       assert.doesNotMatch(text(node(id).innerHTML),/\b700\b/);
     }

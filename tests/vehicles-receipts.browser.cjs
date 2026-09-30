@@ -31,7 +31,9 @@ const server=http.createServer((req,res)=>{
       const save=()=>page.locator('#app-form button[type=submit]').click();
       for(const name of ['Second','Third']){
         await page.locator('[data-action="add-vehicle"]:visible').click();
-        await page.locator('#app-form [name=name]').fill(name);await save();
+        await page.locator('#app-form [name=name]').fill(name);
+        await page.locator('#app-form [name=make]').selectOption('Toyota');await page.locator('#app-form [name=model]').selectOption('Land Cruiser');await page.locator('#app-form [name=year]').selectOption('2026');await save();
+        await page.waitForFunction(()=>!document.querySelector('#app-dialog').open);
         assert.equal(await page.locator('#vehicle-name').innerText(),name);
       }
       let saved=JSON.parse(await snapshot());assert.equal(saved.vehicles.length,3);

@@ -226,3 +226,9 @@ body:not(.auth-ready)>.shell{visibility:hidden;pointer-events:none}.auth-gate{po
 @media(max-width:680px){#service-alert{grid-template-columns:minmax(0,1fr);gap:20px;padding:18px 14px}#service-alert .service-heading{gap:8px}#service-alert .service-heading h2{font-size:1rem}#service-alert .service-heading>.text-btn{font-size:.72rem;padding:7px 9px}#service-alert .alert-icon{width:34px;height:34px;flex-shrink:0}#service-alert #service-remaining .metric-number{font-size:38px!important}#service-alert .service-facts{gap:9px}#service-alert .service-facts>div{padding:16px 7px}#service-alert .service-facts .metric-number{font-size:23px!important}}
 @media(max-width:1050px){#vehicle-list{grid-auto-columns:minmax(260px,calc((100% - 15px)/2))}}
 @media(max-width:680px){#home-vehicles{margin-top:22px}#home-vehicles .home-section-head h2{font-size:1.3rem}#vehicle-list{grid-auto-columns:86%;gap:12px;scroll-snap-type:x mandatory}#vehicle-list .vehicle-card-image{height:180px}#vehicle-list .vehicle-card-body{padding:16px}#vehicle-list .vehicle-card h2{font-size:1.1rem}.vehicle-card-footer{gap:8px}#home-vehicles .fleet-summary>div{padding:8px 11px}}
+
+.maintenance-details p{white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0}
+.maintenance-receipt{margin:8px 0}
+.maintenance-receipt img{display:block;width:100%;max-width:220px;max-height:240px;object-fit:contain}
+@media print{.maintenance-details,.maintenance-receipt{break-inside:avoid}.maintenance-receipt img{max-height:180px}}
+textarea[name=maintenanceDetails]{min-height:180px}
